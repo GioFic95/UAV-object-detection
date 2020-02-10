@@ -201,6 +201,8 @@ if __name__ == "__main__":
     fonts_gab = ["DejaVuMathTeXGyre.ttf"]
     fonts_path_gio = "C:\Windows\Fonts\\"
     fonts_gio = ["Arialbd.ttf", "Roboto-bold.ttf", "Times.ttf", "Cambria.ttc", "Comic.ttf", "Verdana.ttf", "Framd.ttf", "Georgia.ttf", "Calibri.ttf", "Javatext.ttf"]
+    fonts_path_nene = "/Library/Fonts/"
+    fonts_nene = ["Arial.ttf", "Andale Mono.ttf", "Arial Bold.ttf", "Verdana Bold.ttf"]
     # fonts_gio = ["Arial.ttf"]
     intermediate_images = glob.glob(out_path + "/*.png")
     out_dir = './out_img'
