@@ -24,7 +24,8 @@ shapes = glob.glob("./shapes/*.png")
 out_path = "./out_img"
 print("\n\n", input_images, "\n\n", shapes, "\n\n", out_path)
 
-chars = "ABCDEFGHIJKLMNIOPQRTUVWXYZ0123456789"
+#chars = "ABCDEFGHIJKLMNIOPQRTUVWXYZ0123456789"
+chars = "A"
 
 colors = [(0,0,0,255),\
           (255,255,255,255),\
@@ -60,7 +61,7 @@ def phase1(fonts, fonts_path):
     num_chars = len(chars)
     num_fonts = len(fonts)
     
-    datagen = ImageDataGenerator(rotation_range=360,
+    datagen = ImageDataGenerator(rotation_range=0,
                                  width_shift_range=0.1, 
                                  height_shift_range=0.1,
                                  shear_range=10,
@@ -105,7 +106,7 @@ def phase1(fonts, fonts_path):
                 # get a font
                 fnt = ImageFont.truetype(fonts_path + font, font_size)
                 # make a blank image for the text, initialized to transparent text color
-                txt = Image.new('RGBA', (size, size), (255,255,255,0))
+                txt = Image.new('RGBA', (w, h), (255,255,255,0))
                 # get a drawing context
                 d1 = ImageDraw.Draw(txt)
                 # draw text
@@ -118,10 +119,12 @@ def phase1(fonts, fonts_path):
                     char_color = random.choice(colors)
                 d1.text(xy1, char, font=fnt, fill=char_color)
 
-                # put text, shape and base together
+                # put text and shape together, rotate and add the base
                 xy2 = center - int(w/2), center - int(h/2)
-                base.alpha_composite(shape, xy2)
-                out = Image.alpha_composite(base, txt)
+                out = Image.alpha_composite(shape, txt)
+                rand_rotation = random.randint(0, 365)
+                out = out.rotate(rand_rotation)
+                base.alpha_composite(out, xy2)
                 
                 # save result image and append info about this image
                 base_name, _ = os.path.splitext(os.path.basename(img))
@@ -133,7 +136,7 @@ def phase1(fonts, fonts_path):
                 out.save(img_out, "PNG")
                 
                 with open("log.csv", "a") as f:
-                    f.write(file_name + "," + char + "," + shape_name + "," + str(random_color) + "," + str(char_color) + "," + base_name + "," + font_name + "," + str(w) + "," + str(h) + "\n")
+                    f.write(file_name + "," + char + "," + shape_name + "," + str(random_color) + "," + str(char_color) + "," + base_name + "," + font_name + "," + str(rand_rotation) + "," + str(w) + "," + str(h) + "\n")
                     
                 # print actual state
                 print(file_name + "   -   " + str(100*(i/(num_shapes*num_chars*num_fonts))) + "%")
@@ -141,17 +144,15 @@ def phase1(fonts, fonts_path):
                 
                 image = np.expand_dims(out, 0)
                 datagen.fit(image)
-                
-                for x in range(10):
-                    file_name_2 = shape_name + "_" + char + "_" + str(i)
-                    flow = datagen.flow(image,           # image we chose
+                file_name_2 = shape_name + "_" + char + "_" + str(i)
+                flow = datagen.flow(image,               # image we chose
                         save_to_dir=out_dir,             # this is where we figure out where to save
                         save_prefix=file_name_2,         # it will save the images as 'aug_0912' some number for every new augmented image
                         save_format='png')
+                for x in range(10):
                     flow.next()
                     with open("log.csv", "a") as f:
-                        f.write(file_name_2 + "," + char + "," + shape_name + "," + str(random_color) + "," + str(char_color) + "," + base_name + "," + font_name + ",," + "\n")
-                    i += 1
+                        f.write(file_name + "," + char + "," + shape_name + "," + str(random_color) + "," + str(char_color) + "," + base_name + "," + font_name + ",,," + "\n")
 
 
 # def phase2(intermediate_images, out_dir):
@@ -204,7 +205,7 @@ if __name__ == "__main__":
     # fonts_gio = ["Arial.ttf"]
     intermediate_images = glob.glob(out_path + "/*.png")
     out_dir = './out_img'
-    phase1(fonts_gio, fonts_path_gio)
-    phase1(fonts_gab, fonts_path_gab)
-    phase2(intermediate_images)
+    # phase1(fonts_gio, fonts_path_gio)
+    # phase1(fonts_gab, fonts_path_gab)
+    phase2(intermediate_images, out_dir)
 
