@@ -150,7 +150,7 @@ def phase1(fonts, fonts_path):
                         save_format='png')
                     flow.next()
                     with open("log.csv", "a") as f:
-                        f.write(file_name_2 + "," + char + "," + shape_name + "," + str(random_color) + "," + str(char_color) + "," + base_name + "," + font_name + ",," + "\n")
+                        f.write(file_name_2 + "," + char + "," + shape_name + "," + str(random_color) + "," + str(char_color) + "," + base_name + "," + font_name + ",,\n")
                     i += 1
 
 
@@ -182,6 +182,12 @@ def phase1(fonts, fonts_path):
 def phase2(intermediate_images, out_dir):
     for image_path in intermediate_images:
         image = Image.open(image_path).convert('RGBA')
+        
+        name, ext = os.path.splitext(os.path.basename(image_path))
+            
+        shape_name = name.split("_")[0]
+        char = name.split("_")[1]
+
         for i in range(5):
             # apply blur and change contrast and saturation
             blur = random.randint(1, MAX_BLUR)
@@ -192,8 +198,14 @@ def phase2(intermediate_images, out_dir):
             # out = ImageEnhance.Color(out).enhance(saturation)
             
             id = random.randint(1, 10000)
-            name, ext = os.path.splitext(os.path.basename(image_path))
-            out.save(name + "_" + str(id) + ext, "PNG")
+            
+            new_name = name + "_" + str(id) + ext
+            out.save(new_name, "PNG")
+            
+            with open("log.csv", "a") as f:
+                f.write(new_name + "," + char + "," + shape_name + ",,,,,\n")
+            
+            print(new_name)
 
 
 if __name__ == "__main__":
@@ -206,7 +218,7 @@ if __name__ == "__main__":
     # fonts_gio = ["Arial.ttf"]
     intermediate_images = glob.glob(out_path + "/*.png")
     out_dir = './out_img'
-    phase1(fonts_gio, fonts_path_gio)
-    phase1(fonts_gab, fonts_path_gab)
-    phase2(intermediate_images)
+    # phase1(fonts_gio, fonts_path_gio)
+    # phase1(fonts_gab, fonts_path_gab)
+    phase2(intermediate_images, out_dir)
 
