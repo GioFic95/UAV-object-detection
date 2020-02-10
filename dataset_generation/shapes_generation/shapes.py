@@ -136,7 +136,7 @@ def phase1(fonts, fonts_path):
                     f.write(file_name + "," + char + "," + shape_name + "," + str(random_color) + "," + str(char_color) + "," + base_name + "," + font_name + "," + str(w) + "," + str(h) + "\n")
                     
                 # print actual state
-                print(file_name + "   -   " + str(100*(i/(num_shapes*num_chars*num_fonts))) + "%")
+                print(file_name + "   -   " + str(100*(i/(10*num_shapes*num_chars*num_fonts))) + "%")
                 i += 1
                 
                 image = np.expand_dims(out, 0)
