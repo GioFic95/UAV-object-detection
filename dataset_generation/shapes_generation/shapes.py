@@ -6,7 +6,7 @@ import glob
 import numpy as np
 #from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
-import imageio
+#import imageio
 
 """per ogni coppia forma-carattere:
   	1. peschiamo __K__ immagini random dalla cartella img_in, e da ciascuno un settore random della dimensione desiderata (244x244), da usare come sfondo
@@ -41,15 +41,12 @@ size = 244
 box_size = 150
 font_size = int(box_size/2)
 
-num_shapes = len(shapes)
-num_chars = len(chars)
-num_fonts = len(fonts)
-
 M = 10
 
 MAX_BLUR = 4
 MIN_CONTRAST = 0.3
-
+MIN_SATURATION = 0.3
+MAX_SATURATION = 5
 
 
 def get_rand_pos(base):
@@ -59,8 +56,12 @@ def get_rand_pos(base):
 
 
 def phase1(fonts, fonts_path):
+    num_shapes = len(shapes)
+    num_chars = len(chars)
+    num_fonts = len(fonts)
+
     with open("log.csv", "w") as f:
-        f.write("char,shape,base,font,w,h,blur,contrast\n")
+        f.write("char,shape,shape_color,char_color,base,font,w,h,blur,contrast\n")
     i = 1
     
     for s in shapes:
@@ -110,11 +111,13 @@ def phase1(fonts, fonts_path):
                 base.alpha_composite(shape, xy2)
                 out = Image.alpha_composite(base, txt)
                 
-                # apply blur and change contrast
+                # apply blur and change contrast and saturation
                 blur = random.randint(1, MAX_BLUR)
                 out = out.filter(ImageFilter.GaussianBlur(blur))
                 contrast = random.uniform(MIN_CONTRAST, 1)
                 out = ImageEnhance.Contrast(out).enhance(contrast)
+                saturation = random.uniform(MIN_SATURATION, MAX_SATURATION)
+                out = ImageEnhance.Color(out).enhance(saturation)
                 
                 # save result image and append info about this image
                 base_name, _ = os.path.splitext(os.path.basename(img))
@@ -129,7 +132,7 @@ def phase1(fonts, fonts_path):
                 out.save(img_out, "PNG")
                 
                 with open("log.csv", "a") as f:
-                    f.write(char + "," + shape_name + "," + base_name + "," + font_name + "," + str(w) + "," + str(h) + "," + str(blur) + "," + str(contrast) + "\n")
+                    f.write(char + "," + shape_name + "," + str(random_color) + "," + str(char_color) + "," + base_name + "," + font_name + "," + str(w) + "," + str(h) + "," + str(blur) + "," + str(contrast) + "," + str(saturation) + "\n")
                     
                 # print actual state
                 print(file_name + "   -   " + str(100*(i/(num_shapes*num_chars*num_fonts))) + "%")
