@@ -1,3 +1,6 @@
+# custom
+shapes_generation/out_img/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
