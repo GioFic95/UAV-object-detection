@@ -129,7 +129,7 @@ def phase1(fonts, fonts_path, out_dir):
                     f.write(file_name + ".png" + "," + char + "," + shape_name + "\n")
                     
                 # print actual state
-                print(file_name + ".png" + " - " + str(100*(image_id/num_images + num_augmented_imgs)) + "%")
+                print(file_name + ".png" + " - " + str(100*(image_id/(num_images + num_augmented_imgs))) + "%")
                 
                 image = np.expand_dims(out, 0)
                 datagen.fit(image)
