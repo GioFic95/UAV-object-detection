@@ -8,23 +8,16 @@ from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 import imageio
 
-"""per ogni coppia forma-carattere:
-  	1. peschiamo __K__ immagini random dalla cartella img_in, e da ciascuno un settore random della dimensione desiderata (244x244), da usare come sfondo
-  	2. per ognuno di questi:
-				3. Generiamo __N__ immagini in cui la forma varia per dimensione tra 150 e 170 e il carattere cambia dimensione e font
-				4. Per ogni immagine generata:
-						5. usiamo ImageDataGenerator e OpenCV per ottenere __M__ immagini modificate random
-                            (rotazione, shift, luminosità, shear, zoom, channel shift, contrasto, sfocatura)
-                            
-total number of pictures = #shapes * #chars * #fonts * M"""
 
 
 input_images = glob.glob("./in_img/*.jpg")
 shapes = glob.glob("./shapes/*.png")
+
 out_path = "./out_img"
 print("\n\n", input_images, "\n\n", shapes, "\n\n", out_path)
 
-chars = "ABCDEFGHIJKLMNIOPQRTUVWXYZ0123456789"
+#chars = "ABCDEFGHIJKLMNIOPQRTUVWXYZ0123456789"
+chars = "A"
 
 colors = [(0,0,0,255),\
           (255,255,255,255),\
@@ -41,7 +34,8 @@ size = 244
 box_size = 150
 font_size = int(box_size/2)
 
-M = 10
+N = 10 # numero di immagini prodotte dal Keras Generator 
+M = 1 # numero di immagini prodotte modificando Blur e Contrasto
 
 MAX_BLUR = 3
 MIN_CONTRAST = 0.5
@@ -71,8 +65,8 @@ def phase1(fonts, fonts_path):
                                  fill_mode='wrap')
 
     with open("log.csv", "w") as f:
-        f.write("char,shape,shape_color,char_color,base,font,w,h\n")
-    i = 1
+        f.write("file_name, char, shape\n")
+    image_id = 0
     
     for s in shapes:
         white_shape = Image.open(s).convert('RGBA')
@@ -91,8 +85,8 @@ def phase1(fonts, fonts_path):
 
                 # Replace white with random color
                 white_areas = (red == 255) & (blue == 255) & (green == 255)
-                random_color = random.choice(colors)
-                data[..., :-1][white_areas.T] = random_color[:3] # Transpose back needed
+                shape_color = random.choice(colors)
+                data[..., :-1][white_areas.T] = shape_color[:3] # Transpose back needed
                 shape = Image.fromarray(data)
 
                 # get a background image
@@ -114,7 +108,7 @@ def phase1(fonts, fonts_path):
                 xy1 = center - int(char_size[0]/2), center - int(char_size[1]/2)
 
                 char_color = random.choice(colors)
-                while (char_color == random_color):
+                while (char_color == shape_color):
                     char_color = random.choice(colors)
                 d1.text(xy1, char, font=fnt, fill=char_color)
 
@@ -128,59 +122,36 @@ def phase1(fonts, fonts_path):
                 base_name = base_name.replace('(', '').replace(')', '').replace(' ', '_')
                 font_name, _ = os.path.splitext(font)
                 
-                file_name = shape_name + "_" + char + "_" + str(i) + ".png"
+                image_id += 1
+                file_name = shape_name + "_" + char + "_" + str(image_id) + ".png"
                 img_out = os.path.join(out_path, file_name)
                 out.save(img_out, "PNG")
                 
                 with open("log.csv", "a") as f:
-                    f.write(file_name + "," + char + "," + shape_name + "," + str(random_color) + "," + str(char_color) + "," + base_name + "," + font_name + "," + str(w) + "," + str(h) + "\n")
+                    f.write(file_name + "," + char + "," + shape_name + "\n")
                     
                 # print actual state
-                print(file_name + "   -   " + str(100*(i/(10*num_shapes*num_chars*num_fonts))) + "%")
-                i += 1
+                print(file_name + " - " + str(100*(image_id/(N*num_shapes*num_chars*num_fonts))) + "%")
                 
                 image = np.expand_dims(out, 0)
                 datagen.fit(image)
                 
-                for x in range(10):
-                    file_name_2 = shape_name + "_" + char + "_" + str(i)
-                    flow = datagen.flow(image,           # image we chose
-                        save_to_dir=out_dir,             # this is where we figure out where to save
-                        save_prefix=file_name_2,         # it will save the images as 'aug_0912' some number for every new augmented image
+                for x in range(N):
+                    flow = datagen.flow(image,     # image we chose
+                        save_to_dir=out_dir,       # this is where we figure out where to save
+                        save_prefix=file_name + "aug",  # it will save the images with file_name prefix
                         save_format='png')
                     flow.next()
                     with open("log.csv", "a") as f:
-                        f.write(file_name_2 + "," + char + "," + shape_name + "," + str(random_color) + "," + str(char_color) + "," + base_name + "," + font_name + ",,\n")
-                    i += 1
+                        f.write(file_name + "aug" + "," + char + "," + shape_name + "\n")
+                    image_id += 1
 
 
-# def phase2(intermediate_images, out_dir):
-    # datagen = ImageDataGenerator(rotation_range=360,
-                                 # width_shift_range=0.1, 
-                                 # height_shift_range=0.1,
-                                 # shear_range=10,
-                                 # zoom_range=0,
-                                 # brightness_range=(0.7, 1),
-                                 # channel_shift_range=150,
-                                 # horizontal_flip=False,
-                                 # fill_mode='wrap')
-    
-    # for image_path in intermediate_images:
-        # image = np.expand_dims(imageio.imread(image_path), 0)
 
-        # datagen.fit(image)
-
-        # flow = datagen.flow(image,         # image we chose
-                # save_to_dir=out_dir,     # this is where we figure out where to save
-                # save_prefix='aug',         # it will save the images as 'aug_0912' some number for every new augmented image
-                # save_format='png')
-            
-        # for x in range(10):
-            # flow.next()
 
 
 def phase2(intermediate_images, out_dir):
-    j = 1
+    j = 0 # number of created images
     for image_path in intermediate_images:
         image = Image.open(image_path).convert('RGBA')
         
@@ -189,7 +160,7 @@ def phase2(intermediate_images, out_dir):
         shape_name = name.split("_")[0]
         char = name.split("_")[1]
 
-        for i in range(5):
+        for i in range(M):
             # apply blur and change contrast and saturation
             blur = random.randint(1, MAX_BLUR)
             out = image.filter(ImageFilter.GaussianBlur(blur))
@@ -198,28 +169,32 @@ def phase2(intermediate_images, out_dir):
             # saturation = random.uniform(MIN_SATURATION, MAX_SATURATION)
             # out = ImageEnhance.Color(out).enhance(saturation)
             
-            id = random.randint(1, 10000)
-            
-            new_name = name + "_" + str(id) + ext
+            j += 1
+            new_name = name + "_" + str(j) + ext
             out.save(new_name, "PNG")
             
             with open("log.csv", "a") as f:
-                f.write(new_name + "," + char + "," + shape_name + ",,,,,\n")
+                f.write(new_name + "," + char + "," + shape_name + "\n")
             
-            print(os.path.join(out_dir, new_name) + " --- " + str(100*(j/len(intermediate_images)*5)))
-            j += 1
+            print(os.path.join(out_dir, new_name) + " --- " + str(100*(j/(len(intermediate_images)*M))))
+
+
 
 
 if __name__ == "__main__":
     fonts_path_gab = "/usr/share/fonts/truetype/dejavu/"
     fonts_gab = ["DejaVuMathTeXGyre.ttf"]
+    
     fonts_path_gio = "C:\Windows\Fonts\\"
     fonts_gio = ["Arialbd.ttf", "Roboto-bold.ttf", "Times.ttf", "Cambria.ttc", "Comic.ttf", "Verdana.ttf", "Framd.ttf", "Georgia.ttf", "Calibri.ttf", "Javatext.ttf"]
+    
     fonts_path_nene = "/Library/Fonts/"
     fonts_nene = ["Arial.ttf", "Andale Mono.ttf", "Arial Bold.ttf", "Verdana Bold.ttf"]
+    
     # fonts_gio = ["Arial.ttf"]
     intermediate_images = glob.glob(out_path + "/*.png")
     out_dir = './out_img'
-    # phase1(fonts_gio, fonts_path_gio)
+
+    phase1(fonts_gab, fonts_path_gab)
     phase2(intermediate_images, out_dir)
 
