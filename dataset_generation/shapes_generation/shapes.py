@@ -48,7 +48,7 @@ def phase1(fonts, fonts_path, out_dir):
     num_shapes = len(shapes)
     num_chars = len(chars)
     num_fonts = len(fonts)
-    num_images = num_shape*num_chars*num_fonts
+    num_images = num_shapes*num_chars*num_fonts
     num_augmented_imgs = N*num_images
     
     datagen = ImageDataGenerator(rotation_range=360,

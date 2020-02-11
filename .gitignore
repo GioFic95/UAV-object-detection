@@ -3,6 +3,7 @@ dataset_generation/shapes_generation/out_img/*
 dataset_generation/shapes_generation/int_img/*
 dataset_generation/shapes_generation/sample/*
 cnn_model/out_img/*
+cnn_model/out_img_gray/*
 .idea
 
 # Byte-compiled / optimized / DLL files
