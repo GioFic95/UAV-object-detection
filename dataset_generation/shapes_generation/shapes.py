@@ -180,6 +180,7 @@ def phase1(fonts, fonts_path):
 
 
 def phase2(intermediate_images, out_dir):
+    j = 1
     for image_path in intermediate_images:
         image = Image.open(image_path).convert('RGBA')
         
@@ -205,7 +206,8 @@ def phase2(intermediate_images, out_dir):
             with open("log.csv", "a") as f:
                 f.write(new_name + "," + char + "," + shape_name + ",,,,,\n")
             
-            print(new_name)
+            print(os.path.join(out_dir, new_name) + " --- " + str(100*(j/len(intermediate_images)*5)))
+            j += 1
 
 
 if __name__ == "__main__":
@@ -219,6 +221,5 @@ if __name__ == "__main__":
     intermediate_images = glob.glob(out_path + "/*.png")
     out_dir = './out_img'
     # phase1(fonts_gio, fonts_path_gio)
-    # phase1(fonts_gab, fonts_path_gab)
     phase2(intermediate_images, out_dir)
 
