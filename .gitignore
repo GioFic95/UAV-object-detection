@@ -1,5 +1,6 @@
 # custom
 dataset_generation/shapes_generation/out_img/*
+cnn_model/out_img/*
 .idea
 
 # Byte-compiled / optimized / DLL files

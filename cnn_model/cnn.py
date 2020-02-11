@@ -16,7 +16,7 @@ def preprocessing():
         # grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         # binary
-        _, thresh = cv2.threshold(gray, 0.7, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        _, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
         # negative
         hist = cv2.calcHist([thresh], [0], None, [2], [0, 256]).ravel()
@@ -35,7 +35,7 @@ def preprocessing():
         shape_name = shape_name.split("_")[0]
         y += [shape_name]
 
-        cv2.imwrite('test_'+str(id)+'.png', img_dilation)
+        cv2.imwrite('out_img/test_'+str(id)+'.png', img_dilation)
         id += 1
 
     return x, y

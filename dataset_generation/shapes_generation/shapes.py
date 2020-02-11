@@ -1,13 +1,9 @@
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
-import string
 import random
 import os
 import glob
-import numpy as np
 from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
-import imageio
-
 
 
 input_images = glob.glob("./in_img/*.jpg")
@@ -16,26 +12,28 @@ shapes = glob.glob("./shapes/*.png")
 out_path = "./out_img"
 print("\n\n", input_images, "\n\n", shapes, "\n\n", out_path)
 
-#chars = "ABCDEFGHIJKLMNIOPQRTUVWXYZ0123456789"
+# chars = "ABCDEFGHIJKLMNIOPQRTUVWXYZ0123456789"
 chars = "A"
 
-colors = [(0,0,0,255),\
-          (255,255,255,255),\
-          (150,0,0,255),\
-          (0,150,0,255),\
-          (0,0,150,255),\
-          (128,128,128,255),\
-          (255,234,0,255),\
-          (128,0,128,255),\
-          (165,104,42,255),\
-          (255,165,0,255)]
+colors = [(0, 0, 0, 255),
+          (255, 255, 255, 255),
+          (150, 0, 0, 255),
+          (0, 150, 0, 255),
+          (0, 0, 150, 255),
+          (128, 128, 128, 255),
+          (255, 234, 0, 255),
+          (128, 0, 128, 255),
+          (165, 104, 42, 255),
+          (255, 165, 0, 255)]
 
 size = 244
 box_size = 150
 font_size = int(box_size/2)
 
-N = 10 # numero di immagini prodotte dal Keras Generator 
-M = 1 # numero di immagini prodotte modificando Blur e Contrasto
+# numero di immagini prodotte dal Keras Generator
+N = 10
+# numero di immagini prodotte modificando Blur e Contrasto
+M = 1
 
 MAX_BLUR = 3
 MIN_CONTRAST = 0.5
@@ -86,7 +84,8 @@ def phase1(fonts, fonts_path):
                 # Replace white with random color
                 white_areas = (red == 255) & (blue == 255) & (green == 255)
                 shape_color = random.choice(colors)
-                data[..., :-1][white_areas.T] = shape_color[:3] # Transpose back needed
+                # Transpose back needed
+                data[..., :-1][white_areas.T] = shape_color[:3]
                 shape = Image.fromarray(data)
 
                 # get a background image
@@ -108,7 +107,7 @@ def phase1(fonts, fonts_path):
                 xy1 = center - int(char_size[0]/2), center - int(char_size[1]/2)
 
                 char_color = random.choice(colors)
-                while (char_color == shape_color):
+                while char_color == shape_color:
                     char_color = random.choice(colors)
                 d1.text(xy1, char, font=fnt, fill=char_color)
 
@@ -138,16 +137,13 @@ def phase1(fonts, fonts_path):
                 
                 for x in range(N):
                     flow = datagen.flow(image,     # image we chose
-                        save_to_dir=out_dir,       # this is where we figure out where to save
-                        save_prefix=file_name + "aug",  # it will save the images with file_name prefix
-                        save_format='png')
+                                        save_to_dir=out_dir,  # this is where we figure out where to save
+                                        save_prefix=file_name + "aug",  # it will save the images with file_name prefix
+                                        save_format='png')
                     flow.next()
                     with open("log.csv", "a") as f:
                         f.write(file_name + "aug" + "," + char + "," + shape_name + "\n")
                     image_id += 1
-
-
-
 
 
 def phase2(intermediate_images, out_dir):
@@ -179,14 +175,13 @@ def phase2(intermediate_images, out_dir):
             print(os.path.join(out_dir, new_name) + " --- " + str(100*(j/(len(intermediate_images)*M))))
 
 
-
-
 if __name__ == "__main__":
     fonts_path_gab = "/usr/share/fonts/truetype/dejavu/"
     fonts_gab = ["DejaVuMathTeXGyre.ttf"]
     
     fonts_path_gio = "C:\Windows\Fonts\\"
-    fonts_gio = ["Arialbd.ttf", "Roboto-bold.ttf", "Times.ttf", "Cambria.ttc", "Comic.ttf", "Verdana.ttf", "Framd.ttf", "Georgia.ttf", "Calibri.ttf", "Javatext.ttf"]
+    fonts_gio = ["Arialbd.ttf", "Roboto-bold.ttf", "Times.ttf", "Cambria.ttc", "Comic.ttf",
+                 "Verdana.ttf", "Framd.ttf", "Georgia.ttf", "Calibri.ttf", "Javatext.ttf"]
     
     fonts_path_nene = "/Library/Fonts/"
     fonts_nene = ["Arial.ttf", "Andale Mono.ttf", "Arial Bold.ttf", "Verdana Bold.ttf"]
@@ -197,4 +192,3 @@ if __name__ == "__main__":
 
     phase1(fonts_gab, fonts_path_gab)
     phase2(intermediate_images, out_dir)
-
