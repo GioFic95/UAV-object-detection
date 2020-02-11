@@ -35,7 +35,7 @@ def preprocessing():
         shape_name = shape_name.split("_")[0]
         y += [shape_name]
 
-        cv2.imwrite('out_img/test_'+str(id)+'.png', img_dilation)
+        cv2.imwrite('out_img/test_'+str(id)+'.png', img_dilation, [cv2.IMWRITE_PNG_COMPRESSION, 9])
         id += 1
 
     return x, y
