@@ -1,8 +1,11 @@
-from __future__ import print_function
+# from __future__ import print_function
+import fnmatch
 import glob
 import os
 import cv2
 import numpy as np
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
+os.environ['CUDA_VISIBLE_DEVICES']='-1'
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
@@ -10,37 +13,39 @@ from keras.layers import Conv2D, MaxPooling2D
 from keras import backend as K
 from sklearn.model_selection import train_test_split
 
+
 shape_dict = {'circle': 0, 'semicircle': 1, 'quartercircle': 2, 'triangle': 3, 'square': 4, 'rectangle': 5,
-              'trapezoid': 6, 'pentagon': 7, 'hexagon': 8, 'heptagon': 9, 'octagon': 10, 'star': 13, 'cross': 12}
+              'trapezoid': 6, 'pentagon': 7, 'hexagon': 8, 'heptagon': 9, 'octagon': 10, 'star': 11, 'cross': 12}
 
 
 def preprocessing_gray():
     print('START PREPROCESSING')
 
-    input_images = glob.glob("../dataset_generation/shapes_generation/out_img/*.png")
-    x = []
-    y = []
-    id = 0
+    dirpath = "../dataset_generation/shapes_generation/out_img/"
+    num_images = len(fnmatch.filter(os.listdir(dirpath), '*.png'))
+    input_images = os.scandir(dirpath)
+    x = np.zeros((num_images, 244, 244), 'float32')
+    y = np.zeros(num_images)
 
-    for image_name in input_images:
-        image = cv2.imread(image_name)
+    for i, image_entry in enumerate(input_images):
+        print(image_entry.name + " --- " + str(100*i/num_images) + "%")
+        
+        image = cv2.imread(image_entry.path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        x += [image]
-        file_name = os.path.basename(image_name)
-        shape_name, _ = os.path.splitext(os.path.basename(image_name))
+        x[i] = image
+        shape_name, _ = os.path.splitext(image_entry.name)
         shape_name = shape_name.split("_")[0]
-        y += [shape_dict[shape_name]]
+        y[i] = shape_dict[shape_name]
 
-        cv2.imwrite('out_img_gray/'+file_name, image, [cv2.IMWRITE_PNG_COMPRESSION, 9])
-        id += 1
+        # cv2.imwrite('out_img_gray/' + image_entry.name, image, [cv2.IMWRITE_PNG_COMPRESSION, 9])
 
-    print(f'X: {np.asarray(x).shape}')
-    print(f'Y shape: {np.asarray(y).shape}')
-    print(f'Y: {np.unique(np.asarray(y))}')
+    print(f'X: {x.shape}')
+    print(f'Y shape: {y.shape}')
+    print(f'Y: {np.unique(y)}')
     print('END PREPROCESSING')
 
-    return np.asarray(x), np.asarray(y)
+    return x, y
 
 
 def preprocessing_bw():
@@ -97,6 +102,8 @@ def preprocessing_bw():
 def cnn(X, Y):
     print('START CNN')
 
+    checkpoint_path = "training_1/cp.ckpt"   # https://www.tensorflow.org/tutorials/keras/save_and_load
+    checkpoint_dir = os.path.dirname(checkpoint_path)
     batch_size = 128
     num_classes = 13
     epochs = 10
@@ -105,28 +112,36 @@ def cnn(X, Y):
     img_rows, img_cols = 244, 244
 
     # the data, split between train and test sets
-    x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size=0.7, random_state=42)
+    x_train, x_test_val, y_train, y_test_val = train_test_split(X, Y, test_size=0.4, random_state=42, shuffle=True)
+    x_val, x_test, y_val, y_test = train_test_split(x_test_val, y_test_val, test_size=0.5, random_state=42, shuffle=True)
+    del x_test_val, y_test_val
 
     if K.image_data_format() == 'channels_first':
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
         x_test = x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
+        x_val = x_val.reshape(x_val.shape[0], 1, img_rows, img_cols)
         input_shape = (1, img_rows, img_cols)
     else:
         x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
         x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
+        x_val = x_val.reshape(x_val.shape[0], img_rows, img_cols, 1)
         input_shape = (img_rows, img_cols, 1)
 
-    x_train = x_train.astype('float32')
-    x_test = x_test.astype('float32')
+    # x_train = x_train.astype('float32')
+    # x_test = x_test.astype('float32')
+    # x_val = x_val.astype('float32')
     x_train /= 255
     x_test /= 255
+    x_val /= 255
     print('x_train shape:', x_train.shape)
     print(x_train.shape[0], 'train samples')
     print(x_test.shape[0], 'test samples')
+    print(x_val.shape[0], 'validation samples')
 
     # convert class vectors to binary class matrices
     y_train = keras.utils.to_categorical(y_train, num_classes)
     y_test = keras.utils.to_categorical(y_test, num_classes)
+    y_val = keras.utils.to_categorical(y_val, num_classes)
 
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(3, 3),
@@ -140,6 +155,10 @@ def cnn(X, Y):
     model.add(Dropout(0.5))
     model.add(Dense(num_classes, activation='softmax'))
 
+    cp_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
+                                                     save_weights_only=True,
+                                                     verbose=1)
+    
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
@@ -148,7 +167,12 @@ def cnn(X, Y):
               batch_size=batch_size,
               epochs=epochs,
               verbose=1,
-              validation_data=(x_test, y_test))
+              validation_data=(x_val, y_val),
+              callbacks=[cp_callback])
+    
+    model.save_weights('weights_cnn_1')
+    model.save('cnn_1.h5') 
+
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
