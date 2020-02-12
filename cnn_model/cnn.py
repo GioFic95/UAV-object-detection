@@ -1,11 +1,8 @@
 # from __future__ import print_function
 import fnmatch
-import glob
 import os
 import cv2
 import numpy as np
-os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
-os.environ['CUDA_VISIBLE_DEVICES']='-1'
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
@@ -13,6 +10,8 @@ from keras.layers import Conv2D, MaxPooling2D
 from keras import backend as K
 from sklearn.model_selection import train_test_split
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 shape_dict = {'circle': 0, 'semicircle': 1, 'quartercircle': 2, 'triangle': 3, 'square': 4, 'rectangle': 5,
               'trapezoid': 6, 'pentagon': 7, 'hexagon': 8, 'heptagon': 9, 'octagon': 10, 'star': 11, 'cross': 12}
@@ -28,8 +27,8 @@ def preprocessing_gray():
     y = np.zeros(num_images)
 
     for i, image_entry in enumerate(input_images):
-        print(image_entry.name + " --- " + str(100*i/num_images) + "%")
-        
+        print(image_entry.name + " --- " + str(100 * i / num_images) + "%")
+
         image = cv2.imread(image_entry.path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -51,16 +50,19 @@ def preprocessing_gray():
 def preprocessing_bw():
     print('START PREPROCESSING')
 
-    input_images = glob.glob("../dataset_generation/shapes_generation/out_img/*.png")
-    x = []
-    y = []
-    id = 0
+    dirpath = "../dataset_generation/shapes_generation/out_img/"
+    num_images = len(fnmatch.filter(os.listdir(dirpath), '*.png'))
+    input_images = os.scandir(dirpath)
+    x = np.zeros((num_images, 244, 244), 'float32')
+    y = np.zeros(num_images)
 
-    for image_name in input_images:
-        image = cv2.imread(image_name)
+    for i, image_entry in enumerate(input_images):
+        print(image_entry.name + " --- " + str(100 * i / num_images) + "%")
+
+        image = cv2.imread(image_entry.path)
 
         # denoising
-        image = cv2.fastNlMeansDenoisingColored(image, None, 10, 10, 7, 21)
+        # image = cv2.fastNlMeansDenoisingColored(image, None, 10, 10, 7, 21)
 
         # grayscale
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -81,28 +83,25 @@ def preprocessing_bw():
         # dilation
         image = cv2.dilate(image, kernel, iterations=1)
 
-        x += [image]
-
-        file_name = os.path.basename(image_name)
-        shape_name, _ = os.path.splitext(os.path.basename(image_name))
+        x[i] = image
+        shape_name, _ = os.path.splitext(image_entry.name)
         shape_name = shape_name.split("_")[0]
-        y += [shape_dict[shape_name]]
+        y[i] = shape_dict[shape_name]
 
-        cv2.imwrite('out_img_ben/'+file_name, image, [cv2.IMWRITE_PNG_COMPRESSION, 9])
-        id += 1
+        # cv2.imwrite('out_img_ben/' + image_entry.name, image, [cv2.IMWRITE_PNG_COMPRESSION, 9])
 
-    print(f'X: {np.asarray(x).shape}')
-    print(f'Y shape: {np.asarray(y).shape}')
-    print(f'Y: {np.unique(np.asarray(y))}')
+    print(f'X: {x.shape}')
+    print(f'Y shape: {y.shape}')
+    print(f'Y: {np.unique(y)}')
     print('END PREPROCESSING')
 
-    return np.asarray(x), np.asarray(y)
+    return x, y
 
 
 def cnn(X, Y):
     print('START CNN')
 
-    checkpoint_path = "training_1/cp.ckpt"   # https://www.tensorflow.org/tutorials/keras/save_and_load
+    checkpoint_path = "training_1/cp.ckpt"  # https://www.tensorflow.org/tutorials/keras/save_and_load
     checkpoint_dir = os.path.dirname(checkpoint_path)
     batch_size = 128
     num_classes = 13
@@ -113,7 +112,8 @@ def cnn(X, Y):
 
     # the data, split between train and test sets
     x_train, x_test_val, y_train, y_test_val = train_test_split(X, Y, test_size=0.4, random_state=42, shuffle=True)
-    x_val, x_test, y_val, y_test = train_test_split(x_test_val, y_test_val, test_size=0.5, random_state=42, shuffle=True)
+    x_val, x_test, y_val, y_test = train_test_split(x_test_val, y_test_val, test_size=0.5, random_state=42,
+                                                    shuffle=True)
     del x_test_val, y_test_val
 
     if K.image_data_format() == 'channels_first':
@@ -130,9 +130,9 @@ def cnn(X, Y):
     # x_train = x_train.astype('float32')
     # x_test = x_test.astype('float32')
     # x_val = x_val.astype('float32')
-    x_train /= 255
-    x_test /= 255
-    x_val /= 255
+    x_train = x_train/255
+    x_test = x_test/255
+    x_val = x_val/255
     print('x_train shape:', x_train.shape)
     print(x_train.shape[0], 'train samples')
     print(x_test.shape[0], 'test samples')
@@ -144,9 +144,7 @@ def cnn(X, Y):
     y_val = keras.utils.to_categorical(y_val, num_classes)
 
     model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3),
-                     activation='relu',
-                     input_shape=input_shape))
+    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
     model.add(Conv2D(64, (3, 3), activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
@@ -156,9 +154,9 @@ def cnn(X, Y):
     model.add(Dense(num_classes, activation='softmax'))
 
     cp_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
-                                                     save_weights_only=True,
-                                                     verbose=1)
-    
+                                                  save_weights_only=True,
+                                                  verbose=1)
+
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
@@ -169,9 +167,9 @@ def cnn(X, Y):
               verbose=1,
               validation_data=(x_val, y_val),
               callbacks=[cp_callback])
-    
+
     model.save_weights('weights_cnn_1')
-    model.save('cnn_1.h5') 
+    model.save('cnn_1.h5')
 
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
@@ -179,5 +177,6 @@ def cnn(X, Y):
 
 
 if __name__ == '__main__':
-    x, y = preprocessing_gray()
+    # x, y = preprocessing_gray()
+    x, y = preprocessing_bw()
     cnn(x, y)
