@@ -3,15 +3,16 @@ import fnmatch
 import os
 import cv2
 import numpy as np
+from sklearn.model_selection import train_test_split
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras import backend as K
-from sklearn.model_selection import train_test_split
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 shape_dict = {'circle': 0, 'semicircle': 1, 'quartercircle': 2, 'triangle': 3, 'square': 4, 'rectangle': 5,
               'trapezoid': 6, 'pentagon': 7, 'hexagon': 8, 'heptagon': 9, 'octagon': 10, 'star': 11, 'cross': 12}
@@ -98,10 +99,10 @@ def preprocessing_bw():
     return x, y
 
 
-def cnn(X, Y):
+def cnn(X, Y, name):
     print('START CNN')
 
-    checkpoint_path = "training_1/cp.ckpt"  # https://www.tensorflow.org/tutorials/keras/save_and_load
+    checkpoint_path = "models/cp_" + name + ".ckpt"  # https://www.tensorflow.org/tutorials/keras/save_and_load
     checkpoint_dir = os.path.dirname(checkpoint_path)
     batch_size = 128
     num_classes = 13
@@ -168,8 +169,8 @@ def cnn(X, Y):
               validation_data=(x_val, y_val),
               callbacks=[cp_callback])
 
-    model.save_weights('weights_cnn_1')
-    model.save('cnn_1.h5')
+    model.save_weights("models/weights_" + name)
+    model.save("models/" + name + ".h5")
 
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
@@ -177,6 +178,8 @@ def cnn(X, Y):
 
 
 if __name__ == '__main__':
-    # x, y = preprocessing_gray()
-    x, y = preprocessing_bw()
-    cnn(x, y)
+    # x1, y1 = preprocessing_gray()
+    # cnn(x1, y1, "cnn_1")   # grey scale
+
+    x2, y2 = preprocessing_bw()
+    cnn(x2, y2, "cnn_bw")  # binarization
