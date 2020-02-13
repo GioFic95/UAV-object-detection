@@ -1,6 +1,6 @@
 # custom
 dataset_generation/shapes_generation/out_img/*
-# dataset_generation/shapes_generation/out_bw_img/*
+dataset_generation/shapes_generation/out_bw_img/*
 dataset_generation/shapes_generation/int_img/*
 dataset_generation/shapes_generation/sample/*
 cnn_model/out_img/*

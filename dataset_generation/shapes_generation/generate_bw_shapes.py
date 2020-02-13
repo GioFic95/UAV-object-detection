@@ -98,7 +98,7 @@ def generate_bw_iamges(fonts, fonts_path, out_dir):
                 
                 for x in range(N):
                     flow.next()
-                    with open("log.csv", "a") as f:
+                    with open("log_bw.csv", "a") as f:
                         f.write(file_name + "aug" + "," + char + "," + shape_name + "\n")
                     image_id += 1
 
