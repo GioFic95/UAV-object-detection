@@ -2,7 +2,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 import random
 import os
 import glob
-#from keras.preprocessing.image import ImageDataGenerator
+from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 
 
@@ -21,8 +21,7 @@ box_size = 150
 font_size = int(box_size/2)
 
 # numero di immagini prodotte dal Keras Generator
-N = 0
-
+N = 10
 
 
 def generate_bw_iamges(fonts, fonts_path, out_dir):
@@ -32,15 +31,15 @@ def generate_bw_iamges(fonts, fonts_path, out_dir):
     num_images = num_shapes*num_chars*num_fonts
     num_augmented_imgs = N*num_images
     
-    # datagen = ImageDataGenerator(rotation_range=360,
-    #                              width_shift_range=0.1, 
-    #                              height_shift_range=0.1,
-    #                              shear_range=10,
-    #                              zoom_range=0,
-    #                              brightness_range=(0.8, 1),
-    #                              channel_shift_range=0,
-    #                              horizontal_flip=False,
-    #                              fill_mode='wrap')
+    datagen = ImageDataGenerator(rotation_range=360,
+                                 width_shift_range=0.1,
+                                 height_shift_range=0.1,
+                                 shear_range=10,
+                                 zoom_range=0,
+                                 brightness_range=(0.8, 1),
+                                 channel_shift_range=0,
+                                 horizontal_flip=False,
+                                 fill_mode='wrap')
 
     with open("log_bw.csv", "w") as f:
         f.write("file_name, char, shape\n")
@@ -90,20 +89,18 @@ def generate_bw_iamges(fonts, fonts_path, out_dir):
                 # print actual state
                 print(file_name + ".png" + " - " + str(100*(image_id/(num_images + num_augmented_imgs))) + "%")
                 
-                # image = np.expand_dims(out, 0)
-                # datagen.fit(image)
-                # flow = datagen.flow(image,  # image we chose
-                #                     save_to_dir=out_dir,  # this is where we figure out where to save
-                #                     save_prefix=file_name + "_aug",  # it will save the images with file_name prefix
-                #                     save_format='png')
+                image = np.expand_dims(out, 0)
+                datagen.fit(image)
+                flow = datagen.flow(image,  # image we chose
+                                    save_to_dir=out_dir,  # this is where we figure out where to save
+                                    save_prefix=file_name + "_aug",  # it will save the images with file_name prefix
+                                    save_format='png')
                 
-                # for x in range(N):
-                #     flow.next()
-                #     with open("log.csv", "a") as f:
-                #         f.write(file_name + "aug" + "," + char + "," + shape_name + "\n")
-                #     image_id += 1
-
-
+                for x in range(N):
+                    flow.next()
+                    with open("log.csv", "a") as f:
+                        f.write(file_name + "aug" + "," + char + "," + shape_name + "\n")
+                    image_id += 1
 
 
 def main():
@@ -112,12 +109,13 @@ def main():
 
     fonts_path_gio = "C:\Windows\Fonts\\"
     fonts_gio = ["Arialbd.ttf", "Roboto-bold.ttf", "Times.ttf", "Cambria.ttc", "Verdana.ttf"]
+    fonts_gio2 = ["Arialbd.ttf"]
 
     fonts_path_nene = "/Library/Fonts/"
     fonts_nene = ["Arial.ttf", "Andale Mono.ttf", "Arial Bold.ttf", "Verdana Bold.ttf"]
 
     out_dir = "./out_bw_img"
-    generate_bw_iamges(fonts_gab, fonts_path_gab, out_dir)
+    generate_bw_iamges(fonts_gio2, fonts_path_gio, out_dir)
 
 
 if __name__ == "__main__":
