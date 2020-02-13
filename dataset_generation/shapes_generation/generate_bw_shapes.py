@@ -34,7 +34,7 @@ def generate_bw_iamges(fonts, fonts_path, out_dir):
     datagen = ImageDataGenerator(rotation_range=360,
                                  width_shift_range=0.1,
                                  height_shift_range=0.1,
-                                 shear_range=10,
+                                 shear_range=0,
                                  zoom_range=0,
                                  brightness_range=(0.8, 1),
                                  channel_shift_range=0,

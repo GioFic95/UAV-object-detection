@@ -18,10 +18,9 @@ shape_dict = {'circle': 0, 'semicircle': 1, 'quartercircle': 2, 'triangle': 3, '
               'trapezoid': 6, 'pentagon': 7, 'hexagon': 8, 'heptagon': 9, 'octagon': 10, 'star': 11, 'cross': 12}
 
 
-def preprocessing_gray():
+def preprocessing_gray(dirpath):
     print('START PREPROCESSING')
 
-    dirpath = "../dataset_generation/shapes_generation/out_img/"
     num_images = len(fnmatch.filter(os.listdir(dirpath), '*.png'))
     input_images = os.scandir(dirpath)
     x = np.zeros((num_images, 244, 244), 'float32')
@@ -48,10 +47,9 @@ def preprocessing_gray():
     return x, y
 
 
-def preprocessing_bw():
+def preprocessing_bw(dirpath):
     print('START PREPROCESSING')
 
-    dirpath = "../dataset_generation/shapes_generation/out_img/"
     num_images = len(fnmatch.filter(os.listdir(dirpath), '*.png'))
     input_images = os.scandir(dirpath)
     x = np.zeros((num_images, 244, 244), 'float32')
@@ -128,9 +126,6 @@ def cnn(X, Y, name):
         x_val = x_val.reshape(x_val.shape[0], img_rows, img_cols, 1)
         input_shape = (img_rows, img_cols, 1)
 
-    # x_train = x_train.astype('float32')
-    # x_test = x_test.astype('float32')
-    # x_val = x_val.astype('float32')
     x_train = x_train/255
     x_test = x_test/255
     x_val = x_val/255
@@ -178,8 +173,11 @@ def cnn(X, Y, name):
 
 
 if __name__ == '__main__':
-    # x1, y1 = preprocessing_gray()
-    # cnn(x1, y1, "cnn_1")   # grey scale
+    # path = "../dataset_generation/shapes_generation/out_img/"
+    path = "../dataset_generation/shapes_generation/out_bw_img/"
 
-    x2, y2 = preprocessing_bw()
-    cnn(x2, y2, "cnn_bw")  # binarization
+    x1, y1 = preprocessing_gray(path)
+    cnn(x1, y1, "cnn_simple")   # grey scale
+
+    # x2, y2 = preprocessing_bw(path)
+    # cnn(x2, y2, "cnn_bw")  # binarization
