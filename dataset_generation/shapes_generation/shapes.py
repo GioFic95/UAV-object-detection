@@ -28,7 +28,7 @@ box_size = 150
 font_size = int(box_size/2)
 
 # numero di immagini prodotte dal Keras Generator
-N = 10
+N = 100
 # numero di immagini prodotte modificando Blur e Contrasto
 M = 1
 
@@ -188,9 +188,12 @@ def main():
 
     intermediate_path = "./int_img"
     out_path = "./out_img"
+    
+    fonts_gio = ["Arialbd.ttf"]
+    intermediate_path = "./out_simple"
 
     phase1(fonts_gio, fonts_path_gio, intermediate_path)
-    phase2(intermediate_path, out_path)
+    # phase2(intermediate_path, out_path)
 
 
 if __name__ == "__main__":

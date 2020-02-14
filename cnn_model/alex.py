@@ -14,14 +14,13 @@ from tensorflow.python.training.saver import latest_checkpoint
 from keras.engine.saving import load_model
 from keras.utils import to_categorical
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling2D
-
+from keras.layers import Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization
 
 data_path = "../dataset_generation/shapes_generation/out_img/"
 array_path = "./arrays/"
 batch_size = 128
 num_classes = 13
-epochs = 10
+epochs = 30
 np.random.seed(1000)
 img_rows, img_cols = 244, 244   # input image dimensions
 shape_dict = {'circle': 0, 'semicircle': 1, 'quartercircle': 2, 'triangle': 3, 'square': 4, 'rectangle': 5,
@@ -89,7 +88,7 @@ def preprocessing(dirpath):
 
     num_images = len(fnmatch.filter(os.listdir(dirpath), '*.png'))
     input_images = os.scandir(dirpath)
-    x = np.zeros((num_images, img_rows, img_cols), 'float32')
+    x = np.zeros((num_images, img_rows, img_cols, 3), 'float32')
     y = np.zeros(num_images)
 
     for i, image_entry in enumerate(input_images):
@@ -107,10 +106,7 @@ def preprocessing(dirpath):
     print(f'Y: {np.unique(y)}')
     print('END PREPROCESSING')
 
-    x = x.reshape(x.shape[0], img_rows, img_cols, 3)
-    print(f'X: {x.shape}')
     x /= 255
-
     return x, y
 
 
@@ -139,58 +135,74 @@ def alex(X, Y, name, epochs=10, load_checkpoint=False):
         latest = latest_checkpoint(checkpoint_dir)
         model = load_model(latest)
     else:
-        # Instantiate an empty model
+        # Create a sequential model
         model = Sequential()
 
         # 1st Convolutional Layer
-        model.add(Conv2D(filters=96, input_shape=(img_rows, img_cols, 3), kernel_size=(11, 11), strides=(4, 4),
-                         padding='valid'))
+        model.add(Conv2D(filters=96, input_shape=(img_rows, img_cols, 3), kernel_size=(11, 11),
+                         strides=(4, 4), padding='valid'))
         model.add(Activation('relu'))
-        # Max Pooling
+        # Pooling 
         model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid'))
+        # Batch Normalisation before passing it to the next layer
+        model.add(BatchNormalization())
 
         # 2nd Convolutional Layer
         model.add(Conv2D(filters=256, kernel_size=(11, 11), strides=(1, 1), padding='valid'))
         model.add(Activation('relu'))
-        # Max Pooling
+        # Pooling
         model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid'))
+        # Batch Normalisation
+        model.add(BatchNormalization())
 
         # 3rd Convolutional Layer
         model.add(Conv2D(filters=384, kernel_size=(3, 3), strides=(1, 1), padding='valid'))
         model.add(Activation('relu'))
+        # Batch Normalisation
+        model.add(BatchNormalization())
 
         # 4th Convolutional Layer
         model.add(Conv2D(filters=384, kernel_size=(3, 3), strides=(1, 1), padding='valid'))
         model.add(Activation('relu'))
+        # Batch Normalisation
+        model.add(BatchNormalization())
 
         # 5th Convolutional Layer
         model.add(Conv2D(filters=256, kernel_size=(3, 3), strides=(1, 1), padding='valid'))
         model.add(Activation('relu'))
-        # Max Pooling
+        # Pooling
         model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid'))
+        # Batch Normalisation
+        model.add(BatchNormalization())
 
-        # Passing it to a Fully Connected layer
+        # Passing it to a dense layer
         model.add(Flatten())
-        # 1st Fully Connected Layer
-        model.add(Dense(4096, input_shape=(img_rows * img_cols * 3,)))
+        # 1st Dense Layer
+        model.add(Dense(4096, input_shape=(img_rows * img_cols*3,)))
         model.add(Activation('relu'))
         # Add Dropout to prevent overfitting
         model.add(Dropout(0.4))
+        # Batch Normalisation
+        model.add(BatchNormalization())
 
-        # 2nd Fully Connected Layer
+        # 2nd Dense Layer
         model.add(Dense(4096))
         model.add(Activation('relu'))
         # Add Dropout
         model.add(Dropout(0.4))
+        # Batch Normalisation
+        model.add(BatchNormalization())
 
-        # 3rd Fully Connected Layer
-        model.add(Dense(num_classes))
+        # 3rd Dense Layer
+        model.add(Dense(1000))
         model.add(Activation('relu'))
         # Add Dropout
         model.add(Dropout(0.4))
+        # Batch Normalisation
+        model.add(BatchNormalization())
 
         # Output Layer
-        model.add(Dense(17))
+        model.add(Dense(num_classes))
         model.add(Activation('softmax'))
 
     cp_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
@@ -199,7 +211,7 @@ def alex(X, Y, name, epochs=10, load_checkpoint=False):
                                                   mode='max')
 
     model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer=keras.optimizers.Adam,
+                  optimizer='adam',
                   metrics=['accuracy'])
 
     model.fit(x_train, y_train,

@@ -3,6 +3,7 @@ dataset_generation/shapes_generation/out_img/*
 dataset_generation/shapes_generation/out_bw_img/*
 dataset_generation/shapes_generation/int_img/*
 dataset_generation/shapes_generation/sample/*
+/dataset_generation/shapes_generation/out_simple/*
 cnn_model/out_img/*
 cnn_model/out_img_gray/*
 cnn_model/models/*
@@ -137,3 +138,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
