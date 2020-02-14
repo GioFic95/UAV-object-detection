@@ -219,3 +219,4 @@ def alex(X, Y, name, epochs=10, load_checkpoint=False):
 
 if __name__ == '__main__':
     X, Y = preprocessing("../dataset_generation/shapes_generation/sample/")
+    alex(X, Y, "alex_1")
