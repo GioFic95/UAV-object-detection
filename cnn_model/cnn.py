@@ -9,10 +9,12 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 import keras
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D
+from keras.utils import to_categorical
 from keras import backend as K
+from tensorflow.train import latest_checkpoint
 
 shape_dict = {'circle': 0, 'semicircle': 1, 'quartercircle': 2, 'triangle': 3, 'square': 4, 'rectangle': 5,
               'trapezoid': 6, 'pentagon': 7, 'hexagon': 8, 'heptagon': 9, 'octagon': 10, 'star': 11, 'cross': 12}
@@ -97,17 +99,17 @@ def preprocessing_bw(dirpath):
     return x, y
 
 
-def cnn(X, Y, name):
-    print('START CNN')
-
-    checkpoint_path = "models/cp_" + name + ".ckpt"  # https://www.tensorflow.org/tutorials/keras/save_and_load
+def cnn(X, Y, name, epochs=10, load_checkpoint=False):
+    checkpoint_path = "models/cnn/cp_" + name + "_{epoch:04d}.ckpt"  # https://www.tensorflow.org/tutorials/keras/save_and_load
     checkpoint_dir = os.path.dirname(checkpoint_path)
     batch_size = 128
     num_classes = 13
-    epochs = 10
 
     # input image dimensions
     img_rows, img_cols = 244, 244
+
+
+    print('START CNN')
 
     # the data, split between train and test sets
     x_train, x_test_val, y_train, y_test_val = train_test_split(X, Y, test_size=0.4, random_state=42, shuffle=True)
@@ -135,23 +137,28 @@ def cnn(X, Y, name):
     print(x_val.shape[0], 'validation samples')
 
     # convert class vectors to binary class matrices
-    y_train = keras.utils.to_categorical(y_train, num_classes)
-    y_test = keras.utils.to_categorical(y_test, num_classes)
-    y_val = keras.utils.to_categorical(y_val, num_classes)
+    y_train = to_categorical(y_train, num_classes)
+    y_test = to_categorical(y_test, num_classes)
+    y_val = to_categorical(y_val, num_classes)
 
-    model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
-    model.add(Flatten())
-    model.add(Dense(128, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(num_classes, activation='softmax'))
+    if load_checkpoint:
+        latest = latest_checkpoint(checkpoint_dir)
+        model = load_model(latest)
+    else:
+        model = Sequential()
+        model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+        model.add(Conv2D(64, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+        model.add(Flatten())
+        model.add(Dense(128, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(num_classes, activation='softmax'))
 
     cp_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
-                                                  save_weights_only=True,
-                                                  verbose=1)
+                                                  monitor='val_accuracy',
+                                                  verbose=1,
+                                                  mode='max')
 
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.Adadelta(),
@@ -177,7 +184,7 @@ if __name__ == '__main__':
     path = "../dataset_generation/shapes_generation/out_bw_img/"
 
     x1, y1 = preprocessing_gray(path)
-    cnn(x1, y1, "cnn_simple")   # grey scale
+    cnn(x1, y1, "cnn_simple_2")   # grey scale
 
     # x2, y2 = preprocessing_bw(path)
     # cnn(x2, y2, "cnn_bw")  # binarization

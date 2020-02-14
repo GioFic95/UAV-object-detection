@@ -109,7 +109,7 @@ def main():
 
     fonts_path_gio = "C:\Windows\Fonts\\"
     fonts_gio = ["Arialbd.ttf", "Roboto-bold.ttf", "Times.ttf", "Cambria.ttc", "Verdana.ttf"]
-    fonts_gio2 = ["Arialbd.ttf"]
+    fonts_gio2 = ["Arialbd.ttf", "Times.ttf"]
 
     fonts_path_nene = "/Library/Fonts/"
     fonts_nene = ["Arial.ttf", "Andale Mono.ttf", "Arial Bold.ttf", "Verdana Bold.ttf"]
