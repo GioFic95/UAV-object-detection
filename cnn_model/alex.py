@@ -16,15 +16,21 @@ from keras.utils import to_categorical
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization
 
+
+sample_path = "../dataset_generation/shapes_generation/sample/"
 data_path = "../dataset_generation/shapes_generation/out_img/"
 array_path = "./arrays/"
+models_path = "./models/alex/"
 batch_size = 128
 num_classes = 13
-epochs = 30
 np.random.seed(1000)
 img_rows, img_cols = 244, 244   # input image dimensions
 shape_dict = {'circle': 0, 'semicircle': 1, 'quartercircle': 2, 'triangle': 3, 'square': 4, 'rectangle': 5,
               'trapezoid': 6, 'pentagon': 7, 'hexagon': 8, 'heptagon': 9, 'octagon': 10, 'star': 11, 'cross': 12}
+char_dict = {'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+             'A': 10, 'B': 11, 'C': 12, 'D': 13, 'E': 14, 'F': 15, 'G': 16, 'H': 17, 'I': 18, 'J': 19, 'K': 20,
+             'L': 21, 'M': 22, 'N': 23, 'O': 24, 'P': 25, 'Q': 26, 'R': 27, 'S': 28, 'T': 29, 'U': 30, 'V': 31,
+             'W': 32, 'X': 33, 'Y': 34, 'Z': 35}
 
 
 def serialized_preprocessing(iterable):
@@ -83,7 +89,7 @@ def deserialization():
     print(Y.shape)
 
 
-def preprocessing(dirpath):
+def preprocessing(dirpath, shapes):
     print('START PREPROCESSING')
 
     num_images = len(fnmatch.filter(os.listdir(dirpath), '*.png'))
@@ -97,9 +103,10 @@ def preprocessing(dirpath):
         image = cv2.imread(image_entry.path)
 
         x[i] = image
-        shape_name, _ = os.path.splitext(image_entry.name)
-        shape_name = shape_name.split("_")[0]
-        y[i] = shape_dict[shape_name]
+        img_name, _ = os.path.splitext(image_entry.name)
+        shape_name = img_name.split("_")[0]
+        char_name = img_name.split("_")[1]
+        y[i] = shape_dict[shape_name] if shapes else char_dict[char_name]
 
     print(f'X: {x.shape}')
     print(f'Y shape: {y.shape}')
@@ -111,7 +118,7 @@ def preprocessing(dirpath):
 
 
 def alex(X, Y, name, epochs=10, load_checkpoint=False):
-    checkpoint_path = "models/alex/cp_" + name + "_{epoch:04d}.ckpt"  # https://www.tensorflow.org/tutorials/keras/save_and_load
+    checkpoint_path = models_path + "cp_" + name + "_{epoch:04d}_{val_accuracy:.2f}.ckpt"
     checkpoint_dir = os.path.dirname(checkpoint_path)
 
     print('START ALEX')
@@ -221,8 +228,8 @@ def alex(X, Y, name, epochs=10, load_checkpoint=False):
               validation_data=(x_val, y_val),
               callbacks=[cp_callback])
 
-    model.save_weights("models/weights_" + name)
-    model.save("models/" + name + ".h5")
+    model.save_weights(models_path + "weights_" + name)
+    model.save(models_path + name + ".h5")
 
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
@@ -230,5 +237,5 @@ def alex(X, Y, name, epochs=10, load_checkpoint=False):
 
 
 if __name__ == '__main__':
-    X, Y = preprocessing("../dataset_generation/shapes_generation/sample/")
-    alex(X, Y, "alex_1")
+    X, Y = preprocessing(data_path, shapes=False)
+    alex(X, Y, "alex_char_1", 30)

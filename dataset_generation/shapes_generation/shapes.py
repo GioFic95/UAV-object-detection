@@ -28,7 +28,7 @@ box_size = 150
 font_size = int(box_size/2)
 
 # numero di immagini prodotte dal Keras Generator
-N = 100
+N = 10
 # numero di immagini prodotte modificando Blur e Contrasto
 M = 1
 
