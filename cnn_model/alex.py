@@ -22,7 +22,6 @@ data_path = "../dataset_generation/shapes_generation/out_img/"
 array_path = "./arrays/"
 models_path = "./models/alex/"
 batch_size = 128
-num_classes = 13
 np.random.seed(1000)
 img_rows, img_cols = 244, 244   # input image dimensions
 shape_dict = {'circle': 0, 'semicircle': 1, 'quartercircle': 2, 'triangle': 3, 'square': 4, 'rectangle': 5,
@@ -117,16 +116,17 @@ def preprocessing(dirpath, shapes):
     return x, y
 
 
-def alex(X, Y, name, epochs=10, load_checkpoint=False):
+def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
     checkpoint_path = models_path + "cp_" + name + "_{epoch:04d}_{val_accuracy:.2f}.ckpt"
     checkpoint_dir = os.path.dirname(checkpoint_path)
 
     print('START ALEX')
 
     # the data, split between train and test sets
-    x_train, x_test_val, y_train, y_test_val = train_test_split(X, Y, test_size=0.4, random_state=42, shuffle=True)
-    x_val, x_test, y_val, y_test = train_test_split(x_test_val, y_test_val, test_size=0.5, random_state=42, shuffle=True)
-    del x_test_val, y_test_val
+    x_train_val, x_test, y_train_val, y_test = train_test_split(X, Y, test_size=0.2, random_state=42, shuffle=True)
+    del x_test, y_test
+    x_train, x_val, y_train, y_val = train_test_split(x_train_val, y_train_val, train_size=0.75, random_state=42, shuffle=False)
+    del x_train_val, y_train_val
 
     print('x_train shape:', x_train.shape)
     print(x_train.shape[0], 'train samples')
@@ -231,11 +231,22 @@ def alex(X, Y, name, epochs=10, load_checkpoint=False):
     model.save_weights(models_path + "weights_" + name)
     model.save(models_path + name + ".h5")
 
+    x_train_val, x_test, y_train_val, y_test = train_test_split(X, Y, test_size=0.2, random_state=42, shuffle=True)
+    del x_train_val, y_train_val
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
 
 
 if __name__ == '__main__':
+    # training on shapes
+    # X, Y = preprocessing(data_path, shapes=True)
+    # alex(X, Y, "alex_shapes_1", 30, 13)
+
+    # training on chars
     X, Y = preprocessing(data_path, shapes=False)
-    alex(X, Y, "alex_char_1", 30)
+    alex(X, Y, "alex_char_1", 30, 36)
+
+
+
+
