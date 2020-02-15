@@ -110,21 +110,22 @@ def preprocessing(dirpath, shapes):
     print(f'X: {x.shape}')
     print(f'Y shape: {y.shape}')
     print(f'Y: {np.unique(y)}')
-    print('END PREPROCESSING')
+    print('END PREPROCESSING 1')
 
+    # normalize x
     x /= 255
+    print('END PREPROCESSING 2')
+
+    # shuffle x and y
+    permutation = np.random.permutation(y.shape[0])
+    x = x[permutation]
+    y = y[permutation]
+    del permutation
+    print('END PREPROCESSING 3')
     return x, y
 
 
-def shuffle(X, Y, train_proportion, test_proportion):
-    X = pd.DataFrame(X)
-    Y = pd.DataFrame(Y)
-    ind = np.random.permutation(X.index)
-    X = X.reindex(ind)
-    Y = Y.reindex(ind)
-    X = X.to_numpy()
-    Y = Y.to_numpy()
-
+def train_test_val(X, Y, train_proportion, test_proportion):
     train_ratio = int(X.shape[0] * train_proportion)
     test_ratio = train_ratio + int(X.shape[0] * test_proportion)
     X_train = X[:train_ratio, :]
@@ -143,7 +144,7 @@ def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
     print('START ALEX')
 
     # the data, split between train and test sets
-    x_train, x_test, x_val, y_train, y_test, y_val = shuffle(X, Y, 0.6, 0.2)
+    x_train, x_test, x_val, y_train, y_test, y_val = train_test_val(X, Y, 0.6, 0.2)
 
     print('x_train shape:', x_train.shape)
     print(x_train.shape[0], 'train samples')
