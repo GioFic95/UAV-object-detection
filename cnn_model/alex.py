@@ -1,7 +1,6 @@
 import fnmatch
-
-import keras
 import numpy as np
+import pandas as pd
 import os
 import cv2
 from sklearn.model_selection import train_test_split
@@ -11,6 +10,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 from tensorflow.python.training.saver import latest_checkpoint
+import keras
 from keras.engine.saving import load_model
 from keras.utils import to_categorical
 from keras.models import Sequential
@@ -116,6 +116,26 @@ def preprocessing(dirpath, shapes):
     return x, y
 
 
+def shuffle(X, Y, train_proportion, test_proportion):
+    X = pd.DataFrame(X)
+    Y = pd.DataFrame(Y)
+    ind = np.random.permutation(X.index)
+    X = X.reindex(ind)
+    Y = Y.reindex(ind)
+    X = X.to_numpy()
+    Y = Y.to_numpy()
+
+    train_ratio = int(X.shape[0] * train_proportion)
+    test_ratio = train_ratio + int(X.shape[0] * test_proportion)
+    X_train = X[:train_ratio, :]
+    X_test = X[train_ratio:test_ratio, :]
+    X_val = X[test_ratio:, :]
+    Y_train = Y[:train_ratio]
+    Y_test = Y[train_ratio:test_ratio]
+    Y_val = Y[test_ratio:]
+    return X_train, X_test, X_val, Y_train, Y_test, Y_val
+
+
 def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
     checkpoint_path = models_path + "cp_" + name + "_{epoch:04d}_{val_accuracy:.2f}.ckpt"
     checkpoint_dir = os.path.dirname(checkpoint_path)
@@ -123,10 +143,7 @@ def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
     print('START ALEX')
 
     # the data, split between train and test sets
-    x_train_val, x_test, y_train_val, y_test = train_test_split(X, Y, test_size=0.2, random_state=42, shuffle=True)
-    del x_test, y_test
-    x_train, x_val, y_train, y_val = train_test_split(x_train_val, y_train_val, train_size=0.75, random_state=42, shuffle=False)
-    del x_train_val, y_train_val
+    x_train, x_test, x_val, y_train, y_test, y_val = shuffle(X, Y, 0.6, 0.2)
 
     print('x_train shape:', x_train.shape)
     print(x_train.shape[0], 'train samples')
@@ -231,8 +248,6 @@ def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
     model.save_weights(models_path + "weights_" + name)
     model.save(models_path + name + ".h5")
 
-    x_train_val, x_test, y_train_val, y_test = train_test_split(X, Y, test_size=0.2, random_state=42, shuffle=True)
-    del x_train_val, y_train_val
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
