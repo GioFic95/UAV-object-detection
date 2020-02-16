@@ -19,11 +19,12 @@ from keras.layers import Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling
 
 sample_path = "../dataset_generation/shapes_generation/sample/"
 data_path = "../dataset_generation/shapes_generation/out_img/"
+chars_path = "../dataset_generation/chars_generation/out_img/"
 array_path = "./arrays/"
 models_path = "./models/alex/"
 batch_size = 128
 np.random.seed(1000)
-img_rows, img_cols = 244, 244   # input image dimensions
+img_rows, img_cols = 150, 150   # input image dimensions
 shape_dict = {'circle': 0, 'semicircle': 1, 'quartercircle': 2, 'triangle': 3, 'square': 4, 'rectangle': 5,
               'trapezoid': 6, 'pentagon': 7, 'hexagon': 8, 'heptagon': 9, 'octagon': 10, 'star': 11, 'cross': 12}
 char_dict = {'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
@@ -104,7 +105,7 @@ def preprocessing(dirpath, shapes):
         x[i] = image
         img_name, _ = os.path.splitext(image_entry.name)
         shape_name = img_name.split("_")[0]
-        char_name = img_name.split("_")[1]
+        char_name = img_name.split("_")[0]
         y[i] = shape_dict[shape_name] if shapes else char_dict[char_name]
 
     print(f'X: {x.shape}')
@@ -260,9 +261,6 @@ if __name__ == '__main__':
     # alex(X, Y, "alex_shapes_1", 30, 13)
 
     # training on chars
-    X, Y = preprocessing(data_path, shapes=False)
+    X, Y = preprocessing(chars_path, shapes=False)
     alex(X, Y, "alex_char_2", 30, 36)
-
-
-
 
