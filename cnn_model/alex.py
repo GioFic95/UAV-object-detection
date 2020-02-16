@@ -24,7 +24,7 @@ array_path = "./arrays/"
 models_path = "./models/alex/"
 batch_size = 128
 np.random.seed(1000)
-img_rows, img_cols = 150, 150   # input image dimensions
+img_rows, img_cols = 224, 224   # input image dimensions
 shape_dict = {'circle': 0, 'semicircle': 1, 'quartercircle': 2, 'triangle': 3, 'square': 4, 'rectangle': 5,
               'trapezoid': 6, 'pentagon': 7, 'hexagon': 8, 'heptagon': 9, 'octagon': 10, 'star': 11, 'cross': 12}
 char_dict = {'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
@@ -101,8 +101,10 @@ def preprocessing(dirpath, shapes):
         print(image_entry.name + " --- " + str(100 * i / num_images) + "%")
 
         image = cv2.imread(image_entry.path)
-
+        if image.shape[0] != img_rows or image.shape[1] != img_cols:
+            image.resize((img_rows, img_cols, image.shape[2]))
         x[i] = image
+        
         img_name, _ = os.path.splitext(image_entry.name)
         shape_name = img_name.split("_")[0]
         char_name = img_name.split("_")[0]
@@ -204,7 +206,7 @@ def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
         # Passing it to a dense layer
         model.add(Flatten())
         # 1st Dense Layer
-        model.add(Dense(4096, input_shape=(img_rows * img_cols*3,)))
+        model.add(Dense(4096, input_shape=(img_rows * img_cols * 3,)))
         model.add(Activation('relu'))
         # Add Dropout to prevent overfitting
         model.add(Dropout(0.4))
