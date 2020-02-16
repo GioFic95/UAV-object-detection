@@ -138,7 +138,7 @@ def train_test_val(X, Y, train_proportion, test_proportion):
 
 
 def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
-    checkpoint_path = models_path + "cp_" + name + "_{epoch:04d}_{val_accuracy:.2f}.ckpt"
+    checkpoint_path = models_path + "cp_" + name + "_{epoch:04d}_{val_acc:.2f}.ckpt"
     checkpoint_dir = os.path.dirname(checkpoint_path)
 
     print('START ALEX')
@@ -231,7 +231,7 @@ def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
         model.add(Activation('softmax'))
 
     cp_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
-                                                  monitor='val_accuracy',
+                                                  monitor='val_acc',
                                                   verbose=1,
                                                   mode='max')
 
@@ -261,7 +261,7 @@ if __name__ == '__main__':
 
     # training on chars
     X, Y = preprocessing(data_path, shapes=False)
-    alex(X, Y, "alex_char_1", 30, 36)
+    alex(X, Y, "alex_char_2", 30, 36)
 
 
 
