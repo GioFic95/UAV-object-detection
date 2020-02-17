@@ -174,6 +174,8 @@ def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
                                                   verbose=1,
                                                   mode='max')
 
+    log_callback = keras.callbacks.CSVLogger(name + '.csv')
+
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer='adam',
                   metrics=['accuracy'])
@@ -183,7 +185,7 @@ def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
               epochs=epochs,
               verbose=1,
               validation_data=(x_val, y_val),
-              callbacks=[cp_callback])
+              callbacks=[cp_callback, log_callback])
 
     model.save_weights(models_path + "weights_" + name)
     model.save(models_path + name + ".h5")
