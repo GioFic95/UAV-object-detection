@@ -6,7 +6,7 @@ from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 
 
-chars = "ABCDEFGHIJKLMNIOPQRTUVWXYZ0123456789"
+chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 colors = [(0, 0, 0, 255),
           (255, 255, 255, 255),
@@ -80,7 +80,7 @@ def phase1(fonts, fonts_path, out_dir):
             d1.text(xy1, char, font=fnt, fill=char_color)
 
             # put text, shape and base together
-#            out = Image.alpha_composite(base, txt)
+            # out = Image.alpha_composite(base, txt)
             out = txt
             
             # save result image and append info about this image

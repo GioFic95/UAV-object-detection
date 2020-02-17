@@ -1,7 +1,10 @@
 import numpy as np
 import os
 import cv2
-from tensorflow import confusion_matrix
+
+
+#from sklearn.metrics import classification_report, confusion_matrix
+
 from tensorflow.python.training.saver import latest_checkpoint
 import keras
 from keras.engine.saving import load_model
@@ -20,8 +23,10 @@ models_path = "./models/alex/"
 batch_size = 128
 np.random.seed(1000)
 img_rows, img_cols = 224, 224   # input image dimensions
+
 shape_dict = {'circle': 0, 'semicircle': 1, 'quartercircle': 2, 'triangle': 3, 'square': 4, 'rectangle': 5,
               'trapezoid': 6, 'pentagon': 7, 'hexagon': 8, 'heptagon': 9, 'octagon': 10, 'star': 11, 'cross': 12}
+
 char_dict = {'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
              'A': 10, 'B': 11, 'C': 12, 'D': 13, 'E': 14, 'F': 15, 'G': 16, 'H': 17, 'I': 18, 'J': 19, 'K': 20,
              'L': 21, 'M': 22, 'N': 23, 'O': 24, 'P': 25, 'Q': 26, 'R': 27, 'S': 28, 'T': 29, 'U': 30, 'V': 31,
@@ -39,7 +44,6 @@ def preprocessing(dirpath, shapes):
 
     for i, image_entry in enumerate(input_images):
         print(image_entry + " --- " + str(100 * i / num_images) + "%")
-
         image = cv2.imread(os.path.join(dirpath, image_entry))
         x[i] = image/255
 
@@ -54,7 +58,10 @@ def preprocessing(dirpath, shapes):
     print(f'Y shape: {y.shape}')
     print(f'Y: {np.unique(y)}')
     print('END PREPROCESSING')
-    return x, y
+
+    #np.save(os.path.join(array_path, "x.npy") , x)
+    #np.save(os.path.join(array_path, "y.npy") , y)
+    return x,y
 
 
 def train_test_val(X, Y, train_proportion, test_proportion):
@@ -169,7 +176,7 @@ def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
 
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer='adam',
-                  metrics=['accuracy', confusion_matrix])
+                  metrics=['accuracy'])
 
     model.fit(x_train, y_train,
               batch_size=batch_size,
@@ -181,9 +188,25 @@ def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
     model.save_weights(models_path + "weights_" + name)
     model.save(models_path + name + ".h5")
 
+    # print accuracy
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
+    
+    # print confusion matrix
+    #y_pred = model.predict(x_test)
+    #y_pred = np.argmax(y_pred, axis=1)
+    #y_test = np.argmax(y_test, axis=1)    
+    
+    #print(y_pred)
+    #print(y_test)
+
+    
+    #print('Confusion Matrix')
+    #print(confusion_matrix(y_test, y_pred))
+    #print('Classification Report')
+    #target_names = list(char_dict.keys()) 
+    #print(classification_report(y_test, y_pred, target_names=[0,1]))
 
 
 if __name__ == '__main__':
@@ -193,5 +216,5 @@ if __name__ == '__main__':
 
     # training on chars
     X, Y = preprocessing(chars_path, shapes=False)
-    # alex(X, Y, "alex_char_2", 30, 36)
+    alex(X, Y, "alex_char_3", 30, 36)
 
