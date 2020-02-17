@@ -104,11 +104,13 @@ def preprocessing(dirpath, shapes):
         if image.shape[0] != img_rows or image.shape[1] != img_cols:
             image.resize((img_rows, img_cols, image.shape[2]))
         x[i] = image
-        
+
         img_name, _ = os.path.splitext(image_entry.name)
         shape_name = img_name.split("_")[0]
         char_name = img_name.split("_")[0]
         y[i] = shape_dict[shape_name] if shapes else char_dict[char_name]
+
+        # cv2.imwrite("./out_img_resize/" + image_entry.name, image)
 
     print(f'X: {x.shape}')
     print(f'Y shape: {y.shape}')
@@ -264,5 +266,5 @@ if __name__ == '__main__':
 
     # training on chars
     X, Y = preprocessing(chars_path, shapes=False)
-    alex(X, Y, "alex_char_2", 30, 36)
+    # alex(X, Y, "alex_char_2", 30, 36)
 

@@ -10,6 +10,7 @@ cnn_model/out_img/*
 cnn_model/out_img_gray/*
 cnn_model/models/*
 cnn_model/arrays/*
+cnn_model/out_img_resize/*
 .idea
 
 # Byte-compiled / optimized / DLL files
@@ -141,5 +142,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
 
 

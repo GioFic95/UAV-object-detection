@@ -19,8 +19,8 @@ colors = [(0, 0, 0, 255),
           (165, 104, 42, 255),
           (255, 165, 0, 255)]
 
-size = 150
-font_size = int(size/2)
+size = 224
+font_size = 75
 
 # numero di immagini prodotte dal Keras Generator
 N = 20
