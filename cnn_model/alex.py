@@ -2,17 +2,14 @@ import fnmatch
 import numpy as np
 import os
 import cv2
-import multiprocessing
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-
 from tensorflow.python.training.saver import latest_checkpoint
 import keras
 from keras.engine.saving import load_model
 from keras.utils import to_categorical
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 
 sample_path = "../dataset_generation/shapes_generation/sample/"
@@ -31,79 +28,22 @@ char_dict = {'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8'
              'W': 32, 'X': 33, 'Y': 34, 'Z': 35}
 
 
-def serialized_preprocessing(iterable):
-    print('START PREPROCESSING')
-    images, proc_name = iterable
-    x = np.zeros((len(images), img_rows, img_cols, 3), 'float32')
-    y = np.zeros(len(images))
-
-    for i, image_entry in enumerate(images):
-        print(proc_name + " ->" + image_entry + " --- " + str(100 * i / len(images)) + "%")
-
-        image = cv2.imread(image_entry)
-
-        x[i] = image
-        shape_name, _ = os.path.splitext(image_entry)
-        shape_name = shape_name.split("_")[0]
-        y[i] = shape_dict[shape_name]
-
-    print(f'X: {x.shape}')
-    print(f'Y shape: {y.shape}')
-    print(f'Y: {np.unique(y)}')
-    print('END PREPROCESSING')
-
-    # serialization
-    with open(array_path + proc_name + ".npy", 'wb') as f:
-        np.save(f, x)
-        np.save(f, y)
-
-
-def parallel_serialized_preprocessing():
-    cpu_num = multiprocessing.cpu_count()
-    input_images = os.listdir(data_path)
-    x_in = np.array_split(input_images, cpu_num)
-    names = ["proc_" + str(n) for n in range(cpu_num)]
-    print(x_in)
-
-    if __name__ == '__main__':
-        with multiprocessing.Pool(processes=cpu_num) as p:
-            p.map(serialized_preprocessing, zip(x_in, names))
-
-
-def deserialization():
-    arrays = os.listdir("./arrays/")
-    X = np.zeros((0, img_rows, img_cols, 3), 'float32')
-    Y = np.zeros((0), 'float32')
-
-    for i in range(len(arrays)):
-        with open("./arrays/" + arrays[i], 'rb') as f1:
-            x1 = np.load(f1)
-            y1 = np.load(f1)
-            print(i, x1.shape, y1.shape)
-            X = np.concatenate((X, x1))
-            Y = np.concatenate((Y, y1))
-
-    print(X.shape)
-    print(Y.shape)
-
-
 def preprocessing(dirpath, shapes):
     print('START PREPROCESSING')
 
-    num_images = len(fnmatch.filter(os.listdir(dirpath), '*.png'))
-    input_images = os.scandir(dirpath)
+    input_images = os.listdir(dirpath)
+    num_images = len(input_images)
+    np.random.shuffle(input_images)
     x = np.zeros((num_images, img_rows, img_cols, 3), 'float32')
     y = np.zeros(num_images)
 
     for i, image_entry in enumerate(input_images):
-        print(image_entry.name + " --- " + str(100 * i / num_images) + "%")
+        print(image_entry + " --- " + str(100 * i / num_images) + "%")
 
-        image = cv2.imread(image_entry.path)
-        if image.shape[0] != img_rows or image.shape[1] != img_cols:
-            image.resize((img_rows, img_cols, image.shape[2]))
+        image = cv2.imread(image_entry)
         x[i] = image
 
-        img_name, _ = os.path.splitext(image_entry.name)
+        img_name, _ = os.path.splitext(image_entry)
         shape_name = img_name.split("_")[0]
         char_name = img_name.split("_")[0]
         y[i] = shape_dict[shape_name] if shapes else char_dict[char_name]
@@ -113,18 +53,11 @@ def preprocessing(dirpath, shapes):
     print(f'X: {x.shape}')
     print(f'Y shape: {y.shape}')
     print(f'Y: {np.unique(y)}')
-    print('END PREPROCESSING 1')
 
     # normalize x
     x /= 255
-    print('END PREPROCESSING 2')
 
-    # shuffle x and y
-    permutation = np.random.permutation(y.shape[0])
-    x = x[permutation]
-    y = y[permutation]
-    del permutation
-    print('END PREPROCESSING 3')
+    print('END PREPROCESSING')
     return x, y
 
 
