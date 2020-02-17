@@ -140,20 +140,13 @@ def phase2(int_dir, out_dir):
 
 
 def main():
-    fonts_path_gab = "/usr/share/fonts/truetype/dejavu/"
-    fonts_gab = ["DejaVuMathTeXGyre.ttf"]
-
-    fonts_path_gio = "C:\Windows\Fonts\\"
-    fonts_gio = ["Arialbd.ttf", "Roboto-bold.ttf", "Times.ttf", "Cambria.ttc", "Verdana.ttf"]
-
-    fonts_path_nene = "/Library/Fonts/"
-    fonts_nene = ["Arial.ttf", "Andale Mono.ttf", "Arial Bold.ttf", "Verdana Bold.ttf"]
 
     intermediate_path = "./int_img"
     out_path = "./out_img"
-    
+    fonts = ["arialbd.ttf", "Roboto-Bold.ttf", "times.ttf", "cambria.ttc", "verdana.ttf"]
+    fonts_path = "../fonts/"
 
-    phase1(fonts_gio, fonts_path_gio, intermediate_path)
+    phase1(fonts, fonts_path, intermediate_path)
     phase2(intermediate_path, out_path)
 
 

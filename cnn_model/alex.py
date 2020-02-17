@@ -1,9 +1,7 @@
 import fnmatch
 import numpy as np
-import pandas as pd
 import os
 import cv2
-from sklearn.model_selection import train_test_split
 import multiprocessing
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'

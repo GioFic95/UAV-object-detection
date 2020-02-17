@@ -8,6 +8,7 @@ dataset_generation/chars_generation/out_img/*
 dataset_generation/chars_generation/int_img/*
 cnn_model/out_img/*
 cnn_model/out_img_gray/*
+cnn_model/out_bw_img/*
 cnn_model/models/*
 cnn_model/arrays/*
 cnn_model/out_img_resize/*
