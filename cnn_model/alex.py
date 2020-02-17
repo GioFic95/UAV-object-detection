@@ -1,7 +1,7 @@
-import fnmatch
 import numpy as np
 import os
 import cv2
+from tensorflow import confusion_matrix
 from tensorflow.python.training.saver import latest_checkpoint
 import keras
 from keras.engine.saving import load_model
@@ -40,8 +40,8 @@ def preprocessing(dirpath, shapes):
     for i, image_entry in enumerate(input_images):
         print(image_entry + " --- " + str(100 * i / num_images) + "%")
 
-        image = cv2.imread(image_entry)
-        x[i] = image
+        image = cv2.imread(os.path.join(dirpath, image_entry))
+        x[i] = image/255
 
         img_name, _ = os.path.splitext(image_entry)
         shape_name = img_name.split("_")[0]
@@ -53,10 +53,6 @@ def preprocessing(dirpath, shapes):
     print(f'X: {x.shape}')
     print(f'Y shape: {y.shape}')
     print(f'Y: {np.unique(y)}')
-
-    # normalize x
-    x /= 255
-
     print('END PREPROCESSING')
     return x, y
 
@@ -173,7 +169,7 @@ def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
 
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer='adam',
-                  metrics=['accuracy'])
+                  metrics=['accuracy', confusion_matrix])
 
     model.fit(x_train, y_train,
               batch_size=batch_size,
