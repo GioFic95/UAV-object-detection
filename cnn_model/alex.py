@@ -22,7 +22,7 @@ array_path = "./arrays/"
 models_path = "./models/alex/"
 batch_size = 128
 np.random.seed(1000)
-img_rows, img_cols = 224, 224   # input image dimensions
+img_rows, img_cols = 244, 244   # input image dimensions
 
 shape_dict = {'circle': 0, 'semicircle': 1, 'quartercircle': 2, 'triangle': 3, 'square': 4, 'rectangle': 5,
               'trapezoid': 6, 'pentagon': 7, 'hexagon': 8, 'heptagon': 9, 'octagon': 10, 'star': 11, 'cross': 12}
