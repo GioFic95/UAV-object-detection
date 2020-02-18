@@ -23,9 +23,9 @@ size = 224
 font_size = 75
 
 # numero di immagini prodotte dal Keras Generator
-N = 20
+N = 10
 # numero di immagini prodotte modificando Blur e Contrasto
-M = 10
+M = 5
 
 MAX_BLUR = 3
 MIN_CONTRAST = 0.5
