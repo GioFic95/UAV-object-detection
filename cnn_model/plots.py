@@ -89,8 +89,6 @@ def print_confusion_matrix(model_path, input_path, shapes):
 
 if __name__ == '__main__':
     plot_path = "./plots"
-    # plot_acc_loss("./models/alex/char_2_log.txt", plot_path)
-    # plot_acc_loss("./models/alex/char_1_log.txt", plot_path)
     # plot_acc("./models/alex/alex_char_3_log.csv", plot_path)
     # plot_loss("./models/alex/alex_char_3_log.csv", plot_path)
     # plot_acc("./models/alex/log_alex_shapes_2.csv", plot_path)
