@@ -27,7 +27,7 @@ box_size = 150
 font_size = int(box_size/2)
 
 # numero di immagini prodotte dal Keras Generator
-N = 10
+N = 2
 # numero di immagini prodotte modificando Blur e Contrasto
 M = 1
 
@@ -174,7 +174,7 @@ def phase2(int_dir, out_dir):
 
 
 def main():
-    fonts = ["Arialbd.ttf", "Roboto-bold.ttf", "Times.ttf", "Cambria.ttc", "Verdana.ttf"]
+    fonts = ["arialbd.ttf", "Roboto-Bold.ttf", "times.ttf"]
     intermediate_path = "./int_img"
     out_path = "./out_img"
     fonts_path = "../fonts/"
