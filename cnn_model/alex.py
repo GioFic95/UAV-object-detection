@@ -1,10 +1,6 @@
 import numpy as np
 import os
 import cv2
-
-
-#from sklearn.metrics import classification_report, confusion_matrix
-
 from tensorflow.python.training.saver import latest_checkpoint
 import keras
 from keras.engine.saving import load_model
@@ -61,7 +57,7 @@ def preprocessing(dirpath, shapes):
 
     #np.save(os.path.join(array_path, "x.npy") , x)
     #np.save(os.path.join(array_path, "y.npy") , y)
-    return x,y
+    return x, y
 
 
 def train_test_val(X, Y, train_proportion, test_proportion):
@@ -79,6 +75,7 @@ def train_test_val(X, Y, train_proportion, test_proportion):
 def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
     checkpoint_path = models_path + "cp_" + name + "_{epoch:04d}_{val_acc:.2f}.ckpt"
     checkpoint_dir = os.path.dirname(checkpoint_path)
+    log_path = models_path + "log_" + name + '.csv'
 
     print('START ALEX')
 
@@ -174,7 +171,7 @@ def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
                                                   verbose=1,
                                                   mode='max')
 
-    log_callback = keras.callbacks.CSVLogger(name + '.csv')
+    log_callback = keras.callbacks.CSVLogger(log_path)
 
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer='adam',
@@ -194,29 +191,14 @@ def alex(X, Y, name, epochs, num_classes, load_checkpoint=False):
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
-    
-    # print confusion matrix
-    #y_pred = model.predict(x_test)
-    #y_pred = np.argmax(y_pred, axis=1)
-    #y_test = np.argmax(y_test, axis=1)    
-    
-    #print(y_pred)
-    #print(y_test)
-
-    
-    #print('Confusion Matrix')
-    #print(confusion_matrix(y_test, y_pred))
-    #print('Classification Report')
-    #target_names = list(char_dict.keys()) 
-    #print(classification_report(y_test, y_pred, target_names=[0,1]))
 
 
 if __name__ == '__main__':
     # training on shapes
-    # X, Y = preprocessing(data_path, shapes=True)
-    # alex(X, Y, "alex_shapes_1", 30, 13)
+    X, Y = preprocessing(data_path, shapes=True)
+    alex(X, Y, "alex_shapes_2", 30, 13)
 
     # training on chars
-    X, Y = preprocessing(chars_path, shapes=False)
-    alex(X, Y, "alex_char_3", 30, 36)
+#    X, Y = preprocessing(chars_path, shapes=False)
+#    alex(X, Y, "alex_char_3", 30, 36)
 

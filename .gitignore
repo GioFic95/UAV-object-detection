@@ -6,14 +6,15 @@ dataset_generation/shapes_generation/sample/*
 dataset_generation/shapes_generation/out_simple/*
 dataset_generation/chars_generation/out_img/*
 dataset_generation/chars_generation/int_img/*
-/dataset_generation/chars_generation/int_img_0/
-/dataset_generation/chars_generation/out_img_0/
+dataset_generation/chars_generation/int_img_0/
+dataset_generation/chars_generation/out_img_0/
 cnn_model/out_img/*
 cnn_model/out_img_gray/*
 cnn_model/out_bw_img/*
 cnn_model/models/*
 cnn_model/arrays/*
 cnn_model/out_img_resize/*
+simulation/simulation.mp4
 .idea
 
 # Byte-compiled / optimized / DLL files
@@ -145,7 +146,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-
-
-
