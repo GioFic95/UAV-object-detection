@@ -1,6 +1,5 @@
 import glob
 import os
-from PIL import Image
 from keras.engine.saving import load_model
 import cv2 as cv
 import numpy as np
@@ -12,8 +11,10 @@ from cnn_model.alex import shape_dict
 def begin_simulation(model_path):
     frames = os.scandir("./frames")
     model = load_model(model_path)
+    font = cv.FONT_HERSHEY_SIMPLEX
+    rois = []
     for i, frame in enumerate(frames):
-        crop_image(frame.path, "./crops", i)
+        rois += crop_image(frame.path, "./crops", i)
 
     crops = os.listdir("./crops")
     x = np.zeros((len(crops), 244, 244, 3), 'float32')
@@ -25,15 +26,31 @@ def begin_simulation(model_path):
     print(pred_classes, "\n", pred_probs)
 
     frames = os.scandir("./frames")
-    for i, frame in enumerate(frames):
-        Image.open(frame.path).convert('RGBA').show()
+    print("tot num crops:", len(os.listdir("./crops")))
+    assert len(os.listdir("./crops")) == len(pred_probs) == len(pred_classes)
 
+    for i, frame in enumerate(frames):
+        cv.destroyAllWindows()
         crops = glob.glob("./crops/crop_" + str(i) + "_*.png")
         for crop in crops:
             p = pred_probs.pop(0)
-            if p > 0.7:
-                print(crop.split("_")[2], list(shape_dict.keys())[pred_classes.pop(0)], p)
-                Image.open(crop).convert('RGBA').show()
+            c = list(shape_dict.keys())[pred_classes.pop(0)]
+            r = rois.pop(0)
+            print(r)
+            if p > 0.9:
+                text = os.path.basename(crop) + ": class '" + str(c) + "' with probability {:.3f}".format(p)
+                print(text)
+                # Image.open(crop).convert('RGBA').show()
+                window_name = 'Frame ' + str(i)
+                cv.namedWindow(window_name, cv.WINDOW_NORMAL)
+                img = cv.imread(frame.path)
+                img = cv.rectangle(img, r[0], r[1], (255, 0, 0), 3)
+                cv.putText(img, text, (100, img.shape[0] - 200), font, 1, (0, 0, 0), 2, cv.LINE_AA)
+                cv.resizeWindow(window_name, 1000, 666)
+                cv.imshow(window_name, img)
+                k = cv.waitKey(0) & 0xFF
+                if k == 27:  # wait for ESC key to go to next image
+                    cv.destroyAllWindows()
 
 
 if __name__ == '__main__':

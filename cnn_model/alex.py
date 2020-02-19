@@ -8,7 +8,7 @@ from keras.utils import to_categorical
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 
 sample_path = "../dataset_generation/shapes_generation/sample/"

@@ -14,7 +14,7 @@ cnn_model/out_bw_img/*
 cnn_model/models/*
 cnn_model/arrays/*
 cnn_model/out_img_resize/*
-simulation/simulation.mp4
+simulation/*.mp4
 .idea
 
 # Byte-compiled / optimized / DLL files
