@@ -18,8 +18,8 @@ def crop_image(in_path, out_path, name):
     print("Num contours:", len(contours))
 
     # filtra zone troppo piccole o troppo grandi
-    min_area = 100
-    max_area = 5000
+    min_area = 5000
+    max_area = 20000
     contours = [c for c in contours if min_area <= cv.contourArea(c) <= max_area]
     print("Num contours after filtering:", len(contours))
 
