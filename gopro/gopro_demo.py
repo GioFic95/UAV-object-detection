@@ -1,4 +1,5 @@
 import datetime
+import time
 import os
 import itertools
 import pandas as pd
@@ -56,6 +57,7 @@ def take_pic(gpCam, name):
     fn = os.path.splitext(gpCam.getInfoFromURL(new_pic)[1])
     fn = fn[0] + "__" + name + fn[1]
     print("fn:", fn)
+    time.sleep(1)
     gpCam.downloadLastMedia(new_pic, "pics/demo/" + fn)
 
 
