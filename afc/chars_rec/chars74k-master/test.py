@@ -46,8 +46,9 @@ def test(dataset_name, model_name, store_misclassified):
                             towrite,
                             preprocessing.CLASSES[predicted_label],
                             (0, img_h+20), cv2.FONT_HERSHEY_PLAIN, 2, 255)
-                    cv2.imwrite('img/misclassified/'+str(i)+'.png', towrite)
-            if label in classes[0].argsort()[-3:]: in_top3 += 1
+                    cv2.imwrite('img/misclassified/' + model_name + '/' + str(i)+'.png', towrite)
+            if label in classes[0].argsort()[-3:]:
+                in_top3 += 1
 
         # showing metrics
         print("Accuracy :", correct/n_test*100)

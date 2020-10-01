@@ -4,6 +4,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import argparse
 from datetime import datetime
+import sklearn
 
 
 class Classifier:
@@ -58,9 +59,8 @@ class Classifier:
         self.train_step = tf.train.RMSPropOptimizer(1e-3).minimize(self.loss)
 
 
-def train(model_name, training_dataset, validation_dataset):
+def train(model_name, training_dataset, validation_dataset, train_steps):
     img_h, img_w = 64, 64
-    train_steps = int(1e5)
     batch_size = 10
     start = datetime.now()
 
@@ -87,20 +87,26 @@ def train(model_name, training_dataset, validation_dataset):
             })
 
             # show and save training status
-            if t % 10 == 0:
-                delta = datetime.now() - start
-                print(f"step {t}/{train_steps}, loss: {loss}, elapsed time: {delta}")
-            if t % 1000 == 0:
+            if t % 10000 == 0:
                 saver.save(sess, 'saves/'+model_name, global_step=t)
 
             summary = tf.Summary()
             summary.value.add(tag='Loss', simple_value=float(loss))
-            if t % 50 == 0:
+            if t % 100 == 0:
                 # testing model on validation set occasionally
                 images, labels = preprocessing.get_batch(
                         validation_dataset, 20, (img_h, img_w))
-                classes = sess.run(nn.classes, feed_dict={nn.input:images})
-                summary.value.add(tag='ValidationError', simple_value=float(sum(np.argmax(classes, -1) != labels)))
+                classes = sess.run(nn.classes, feed_dict={nn.input: images})
+                predictions = np.argmax(classes, -1)
+
+                val_err = float(sum(predictions != labels))
+                summary.value.add(tag='ValidationError', simple_value=val_err)
+
+                val_acc = sklearn.metrics.accuracy_score(labels, predictions)
+                summary.value.add(tag='ValidationAccuracy', simple_value=val_acc)
+
+                delta = datetime.now() - start
+                print(f"step {t}/{train_steps}, loss: {loss}, valErr: {val_err}, valAcc: {val_acc}, elapsed time: {delta}")
             summary_writer.add_summary(summary, t)
             summary_writer.flush()
 
@@ -114,4 +120,5 @@ if __name__ == "__main__":
     parser.add_argument('-m', type=str, required=True, help='Model name')
 
     opt = parser.parse_args()
-    train(opt.m, opt.t, opt.v)
+    iters = int(5e5) + 1
+    train(opt.m, opt.t, opt.v, iters)
