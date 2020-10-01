@@ -63,6 +63,7 @@ def train(model_name, training_dataset, validation_dataset, train_steps):
     img_h, img_w = 64, 64
     batch_size = 10
     start = datetime.now()
+    best_acc = 0
 
     nn = Classifier('classifier', img_w, img_h, len(preprocessing.CLASSES), 0.8)
     dataset = list(map(lambda f: f.strip(),
@@ -74,7 +75,7 @@ def train(model_name, training_dataset, validation_dataset, train_steps):
         
         init = tf.global_variables_initializer()
         sess.run(init)
-        saver = tf.train.Saver()
+        saver = tf.train.Saver(max_to_keep=10)
         summary_writer = tf.summary.FileWriter('summaries/'+model_name)
 
         for t in range(train_steps):
@@ -88,7 +89,8 @@ def train(model_name, training_dataset, validation_dataset, train_steps):
 
             # show and save training status
             if t % 10000 == 0:
-                saver.save(sess, 'saves/'+model_name, global_step=t)
+                print("save")
+                saver.save(sess, 'saves/step_'+model_name, global_step=t)
 
             summary = tf.Summary()
             summary.value.add(tag='Loss', simple_value=float(loss))
@@ -107,6 +109,12 @@ def train(model_name, training_dataset, validation_dataset, train_steps):
 
                 delta = datetime.now() - start
                 print(f"step {t}/{train_steps}, loss: {loss}, valErr: {val_err}, valAcc: {val_acc}, elapsed time: {delta}")
+
+                if val_acc >= best_acc:
+                    saver.save(sess, 'saves/best_acc_' + model_name, global_step=t)
+                    best_acc = val_acc
+                    print("new val acc", best_acc)
+
             summary_writer.add_summary(summary, t)
             summary_writer.flush()
 
