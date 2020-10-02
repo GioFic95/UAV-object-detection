@@ -64,6 +64,7 @@ def train(model_name, training_dataset, validation_dataset, train_steps):
     batch_size = 10
     start = datetime.now()
     best_acc = 0
+    best_loss = np.infty
 
     nn = Classifier('classifier', img_w, img_h, len(preprocessing.CLASSES), 0.8)
     dataset = list(map(lambda f: f.strip(),
@@ -97,7 +98,7 @@ def train(model_name, training_dataset, validation_dataset, train_steps):
             if t % 100 == 0:
                 # testing model on validation set occasionally
                 images, labels = preprocessing.get_batch(
-                        validation_dataset, 20, (img_h, img_w))
+                        validation_dataset, 100, (img_h, img_w))
                 classes = sess.run(nn.classes, feed_dict={nn.input: images})
                 predictions = np.argmax(classes, -1)
 
@@ -114,6 +115,11 @@ def train(model_name, training_dataset, validation_dataset, train_steps):
                     saver.save(sess, 'saves/best_acc_' + model_name, global_step=t)
                     best_acc = val_acc
                     print("new val acc", best_acc)
+
+                if val_acc <= best_loss:
+                    saver.save(sess, 'saves/best_loss_' + model_name, global_step=t)
+                    best_loss = loss
+                    print("new loss", best_loss)
 
             summary_writer.add_summary(summary, t)
             summary_writer.flush()
