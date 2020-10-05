@@ -1,3 +1,4 @@
+import os
 import preprocessing, train
 import tensorflow as tf
 import numpy as np
@@ -10,9 +11,13 @@ def test(dataset_name, model_name, store_misclassified):
     img_h, img_w = 64, 64
 
     nn = train.Classifier('classifier', img_w, img_h, len(preprocessing.CLASSES))
-    dataset = list(map(lambda f:f.strip(), open(dataset_name, 'r').readlines()))
+    dataset = list(map(lambda f: f.strip(), open(dataset_name, 'r').readlines()))
 
     n_test = len(dataset)
+
+    path = 'img/misclassified/' + model_name.split("/")[1] + '/'
+    if not os.path.exists(path):
+        os.makedirs(path)
 
     with tf.Session() as sess:
         saver = tf.train.Saver()
@@ -30,12 +35,13 @@ def test(dataset_name, model_name, store_misclassified):
             label = preprocessing.get_class_index(dataset[i])
 
             # predict
-            classes = sess.run(nn.classes, feed_dict={ nn.input : [image] })
+            classes = sess.run(nn.classes, feed_dict={nn.input: [image]})
             predicted_label = np.argmax(classes[0])
 
             # update metrics
             confusion[label, predicted_label] += 1
-            if label == predicted_label: correct += 1
+            if label == predicted_label:
+                correct += 1
             if (preprocessing.CLASSES[label].lower()
                     == preprocessing.CLASSES[predicted_label].lower()):
                 correct_case_insensitive += 1
@@ -46,7 +52,7 @@ def test(dataset_name, model_name, store_misclassified):
                             towrite,
                             preprocessing.CLASSES[predicted_label],
                             (0, img_h+20), cv2.FONT_HERSHEY_PLAIN, 2, 255)
-                    cv2.imwrite('img/misclassified/' + model_name + '/' + str(i)+'.png', towrite)
+                    cv2.imwrite(path + str(i)+'.png', towrite)
             if label in classes[0].argsort()[-3:]:
                 in_top3 += 1
 
