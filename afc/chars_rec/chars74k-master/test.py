@@ -7,16 +7,19 @@ from tqdm import tqdm
 import argparse
 
 
-def test(dataset_name, model_name, store_misclassified):
+def test(dataset_name, model_name, store_misclassified, fine_tuning=False):
     img_h, img_w = 64, 64
 
-    nn = train.Classifier('classifier', img_w, img_h, len(preprocessing.CLASSES))
+    if fine_tuning:
+        nn = train.FineTuningClassifier('classifier', img_w, img_h, len(preprocessing.CLASSES), 0.8)
+    else:
+        nn = train.Classifier('classifier', img_w, img_h, len(preprocessing.CLASSES))
     dataset = list(map(lambda f: f.strip(), open(dataset_name, 'r').readlines()))
 
     n_test = len(dataset)
 
     path = 'img/misclassified/' + model_name.split("/")[1] + '/'
-    if not os.path.exists(path):
+    if store_misclassified and not os.path.exists(path):
         os.makedirs(path)
 
     with tf.Session() as sess:
@@ -71,7 +74,8 @@ if __name__ == "__main__":
     parser.add_argument('-d', type=str, required=True, help='Dataset name')
     parser.add_argument('-m', type=str, required=True, help='Model name')
     parser.add_argument('-s', action='store_true', help='Store misclassified')
+    parser.add_argument('-f', action='store_true', help='Perform fine-tuning')
 
     opt = parser.parse_args()
 
-    test(opt.d, opt.m, opt.s)
+    test(opt.d, opt.m, opt.s, fine_tuning=opt.f)
