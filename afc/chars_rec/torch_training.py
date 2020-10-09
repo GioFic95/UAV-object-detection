@@ -134,9 +134,9 @@ def main():
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
 
-    # evaluation
+    # evaluation (test)
     if args.evaluate:
-        validate(test_loader, model, criterion, 0)
+        validate(test_loader, model, criterion, 0, is_test=True)
         return
 
     # training
@@ -222,7 +222,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
                     loss=losses, top1=top1, top5=top5, since=datetime.now() - start))
 
 
-def validate(val_loader, model, criterion, epoch):
+def validate(val_loader, model, criterion, epoch, is_test=False):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -252,9 +252,10 @@ def validate(val_loader, model, criterion, epoch):
         # writer.add_scalar("Accuracy5/valid", prec5, i)
 
         summary = tf.Summary()
-        summary.value.add(tag='Loss/valid', simple_value=float(loss))
-        summary.value.add(tag='Accuracy1/valid', simple_value=float(prec1))
-        summary.value.add(tag='Accuracy5/valid', simple_value=float(prec5))
+        tag = "test" if is_test else "valid"
+        summary.value.add(tag=f'Loss/{tag}', simple_value=float(loss))
+        summary.value.add(tag=f'Accuracy1/{tag}', simple_value=float(prec1))
+        summary.value.add(tag=f'Accuracy5/{tag}', simple_value=float(prec5))
         writer.add_summary(summary, len(val_loader)*epoch+i)
         writer.flush()
 

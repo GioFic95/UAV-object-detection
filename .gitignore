@@ -158,3 +158,5 @@ dmypy.json
 /afc/chars_rec/chars74k-master/datasplits/
 /afc/chars_rec/chars74k-master/readme.md
 /afc/chars_rec/chars74k-master/requirements.txt
+/afc/chars_rec/checkpoints/
+/afc/chars_rec/summaries/
