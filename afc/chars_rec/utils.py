@@ -1,4 +1,7 @@
 from pprint import pprint
+import os
+import shutil
+import glob
 import argparse
 import string
 import numpy as np
@@ -60,16 +63,42 @@ def split_dataset():
             break
 
 
+def copy_datasets():
+    os.chdir("./chars74k-master")
+    train_path = "./datasplits/good_train"
+    val_path = "./datasplits/good_validation"
+    test_path = "./datasplits/good_test"
+    new_train = "../../datasets/mychars/train"
+    new_val = "../../datasets/mychars/val"
+    new_test = "../../datasets/mychars/test"
+    old_paths = [train_path, val_path, test_path]
+    new_paths = [new_train, new_val, new_test]
+
+    for old, new in zip(old_paths, new_paths):
+        with open(old) as f:
+            files = f.read().splitlines()
+            for img in files:
+                name = os.path.basename(img)
+                new_dir = img.split("/")[-2]
+                new_path = os.path.join(new, new_dir)
+                if not os.path.exists(new_path):
+                    os.mkdir(new_path)
+                new_name = os.path.join(new_path, name)
+                shutil.copy2(img, new_name)
+
+
 if __name__ == '__main__':
-    print(len(chars), chars)
-    c = 30
-    print(c, chars[c-1])
+    # print(len(chars), chars)
+    # c = 30
+    # print(c, chars[c-1])
+    #
+    # print(tf, torch)
+    #
+    # split_dataset()
+    #
+    # model_names = sorted(name for name in models.__dict__
+    #                      if name.islower() and not name.startswith("__")
+    #                      and callable(models.__dict__[name]))
+    # print(model_names)
 
-    print(tf, torch)
-
-    split_dataset()
-
-    model_names = sorted(name for name in models.__dict__
-                         if name.islower() and not name.startswith("__")
-                         and callable(models.__dict__[name]))
-    print(model_names)
+    copy_datasets()

@@ -98,18 +98,26 @@ def main():
     cudnn.benchmark = True
 
     # Data loading code
-    full_dataset = datasets.ImageFolder(args.data, transforms.Compose([
+    traindir = os.path.join(args.data, 'train')
+    valdir = os.path.join(args.data, 'val')
+    testdir = os.path.join(args.data, 'test')
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    
+    train_set = datasets.ImageFolder(traindir, transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        normalize,
     ]))
-
-    train_size = int(0.6 * len(full_dataset))
-    val_size = int(0.2 * len(full_dataset))
-    test_size = len(full_dataset) - train_size - val_size
-    train_set, val_set, test_set = data.random_split(dataset=full_dataset,
-                                                     lengths=[train_size, val_size, test_size])
-                                                     # generator=torch.Generator().manual_seed(42))
+    val_set = datasets.ImageFolder(valdir, transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        normalize,
+    ]))
+    test_set = datasets.ImageFolder(testdir, transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        normalize,
+    ]))
     print(f"train_set: {len(train_set)}; val_set: {len(val_set)}; test_set: {len(test_set)}")
 
     train_loader = torch.utils.data.DataLoader(
