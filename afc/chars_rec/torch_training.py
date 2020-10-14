@@ -152,7 +152,7 @@ def main():
         # evaluate on validation set
         acc1 = validate(val_loader, model, criterion, epoch)
 
-        # remember best acc@1 and save checkpoint
+        # remember best Acc@1 and save checkpoint
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
         save_checkpoint({
@@ -218,8 +218,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'acc@1 {top1.val:.3f} ({top1.avg:.3f})\t'
-                  'acc@5 {top5.val:.3f} ({top5.avg:.3f})\t'
+                  'Acc@1 {top1.val:.3f} ({top1.avg:.3f})\t'
+                  'Acc@5 {top5.val:.3f} ({top5.avg:.3f})\t'
                   'Since {since}'.format(
                     epoch, i, len(train_loader), batch_time=batch_time, data_time=data_time,
                     loss=losses, top1=top1, top5=top5, since=datetime.now() - start))
@@ -270,13 +270,13 @@ def validate(val_loader, model, criterion, epoch, is_test=False):
             print('Test: [{0}/{1}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'acc@1 {top1.val:.3f} ({top1.avg:.3f})\t'
-                  'acc@5 {top5.val:.3f} ({top5.avg:.3f})\t'
+                  'Acc@1 {top1.val:.3f} ({top1.avg:.3f})\t'
+                  'Acc@5 {top5.val:.3f} ({top5.avg:.3f})\t'
                   'Since {since}'.format(
                    i, len(val_loader), batch_time=batch_time, loss=losses,
                    top1=top1, top5=top5, since=datetime.now() - start))
 
-    print(' * acc@1 {top1.avg:.3f} acc@5 {top5.avg:.3f}'
+    print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
           .format(top1=top1, top5=top5))
 
     return top1.avg
