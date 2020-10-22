@@ -31,11 +31,8 @@ parser.add_argument('-t', '--title', default='myModel', type=str, metavar='T',
                     help='title of this model training/testing (default: MyModel)')
 parser.add_argument('data', metavar='DIR',
                     help='path to dataset')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet18',
-                    choices=model_names,
-                    help='model architecture: ' +
-                        ' | '.join(model_names) +
-                        ' (default: resnet18)')
+parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet18', choices=model_names,
+                    help='model architecture: ' + ' | '.join(model_names) + ' (default: resnet18)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=90, type=int, metavar='N',
@@ -54,6 +51,10 @@ parser.add_argument('--print-freq', '-p', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
+parser.add_argument('--transfer', default='', type=str, metavar='PATH',
+                    help='path to the pretraining model')
+parser.add_argument('-g', '--gray', dest='gray', action='store_true',
+                    help='use grayscale images')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
@@ -96,6 +97,16 @@ def main():
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
 
+    # optionally resume from a checkpoint
+    if args.transfer:
+        if os.path.isfile(args.transfer):
+            print("=> loading transfer checkpoint '{}'".format(args.transfer))
+            checkpoint = torch.load(args.transfer)
+            model.load_state_dict(checkpoint['state_dict'])
+            print("=> loaded transfer checkpoint '{}'".format(args.transfer))
+        else:
+            print("=> no transfer checkpoint found at '{}'".format(args.transfer))
+
     cudnn.benchmark = True
 
     # Data loading code
@@ -103,12 +114,21 @@ def main():
     valdir = os.path.join(args.data, 'val')
     testdir = os.path.join(args.data, 'test')
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    compose = transforms.Compose([
-        transforms.Grayscale(num_output_channels=3),
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        normalize,
-    ])
+    if args.gray:
+        print("=> using grayscale images.")
+        compose = transforms.Compose([
+            transforms.Grayscale(num_output_channels=3),
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            normalize,
+        ])
+    else:
+        print("=> using color images.")
+        compose = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            normalize,
+        ])
 
     train_set = datasets.ImageFolder(traindir, compose)
     val_set = datasets.ImageFolder(valdir, compose)
