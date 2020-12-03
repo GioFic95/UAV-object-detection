@@ -1,0 +1,7 @@
+lato/LatoWeb-Regular.ttf
+roboto/Roboto-Regular.ttf
+sans/OpenSans-Regular.ttf
+ubuntu/Ubuntu-Bold.ttf
+ubuntu/Ubuntu-Regular.ttf
+ubuntucondensed/UbuntuCondensed-Regular.ttf
+ubuntumono/UbuntuMono-Regular.ttf

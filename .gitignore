@@ -1,36 +1,3 @@
-# custom
-.idea
-dataset_generation/shapes_generation/out_img/*
-dataset_generation/shapes_generation/out_bw_img/*
-dataset_generation/shapes_generation/int_img/*
-dataset_generation/shapes_generation/sample/*
-dataset_generation/shapes_generation/out_simple/*
-dataset_generation/chars_generation/out_img/*
-dataset_generation/chars_generation/int_img/*
-dataset_generation/chars_generation/int_img_0/
-dataset_generation/chars_generation/out_img_0/
-cnn_model/out_img/*
-cnn_model/out_img_gray/*
-cnn_model/out_bw_img/*
-cnn_model/models/*
-cnn_model/arrays/*
-cnn_model/out_img_resize/*
-simulation/*.mp4
-simulation/crops/*
-simulation/frames/*
-gopro/pics/demo/*
-gopro/pics/volo1/*
-gopro/pics/volo2/*
-/afc/datasets/*
-/afc/chars_rec/chars74k-master/summaries/
-/afc/chars_rec/chars74k-master/saves/
-/afc/chars_rec/chars74k-master/img/
-/afc/chars_rec/chars74k-master/datasplits/
-/afc/chars_rec/chars74k-master/readme.md
-/afc/chars_rec/chars74k-master/requirements.txt
-/afc/chars_rec/checkpoints/
-/afc/chars_rec/summaries/
-/afc/make_dataset/img/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -161,3 +128,43 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# custom
+.idea
+dataset_generation/shapes_generation/out_img/*
+dataset_generation/shapes_generation/out_bw_img/*
+dataset_generation/shapes_generation/int_img/*
+dataset_generation/shapes_generation/sample/*
+dataset_generation/shapes_generation/out_simple/*
+dataset_generation/chars_generation/out_img/*
+dataset_generation/chars_generation/int_img/*
+dataset_generation/chars_generation/int_img_0/
+dataset_generation/chars_generation/out_img_0/
+cnn_model/out_img/*
+cnn_model/out_img_gray/*
+cnn_model/out_bw_img/*
+cnn_model/models/*
+cnn_model/arrays/*
+cnn_model/out_img_resize/*
+simulation/*.mp4
+simulation/crops/*
+simulation/frames/*
+gopro/pics/demo/*
+gopro/pics/volo1/*
+gopro/pics/volo2/*
+/afc/datasets/*
+/afc/chars_rec/chars74k-master/summaries/
+/afc/chars_rec/chars74k-master/saves/
+/afc/chars_rec/chars74k-master/img/
+/afc/chars_rec/chars74k-master/datasplits/
+/afc/chars_rec/chars74k-master/readme.md
+/afc/chars_rec/chars74k-master/requirements.txt
+/afc/chars_rec/checkpoints/
+/afc/chars_rec/summaries/
+/afc/make_dataset/img/
+/afc/make_dataset/SynthText/prep_scripts/dcnf-fcsp/
+/afc/make_dataset/SynthText/prep_scripts/mcg/
+/afc/make_dataset/SynthText/data/datasets/
+/afc/make_dataset/SynthText/data/models/
+/afc/make_dataset/SynthText/results/
+/afc/make_dataset/SynthText.zip

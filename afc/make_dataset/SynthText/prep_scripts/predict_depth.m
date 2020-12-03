@@ -7,9 +7,9 @@
 
 function predict_depth()
     % setup vlfeat
-    run( '../libs/vlfeat-0.9.18/toolbox/vl_setup');
+    run( './dcnf-fcsp/libs/vlfeat-0.9.18/toolbox/vl_setup');
     % setup matconvnet
-    dir_matConvNet='../libs/matconvnet/matlab/';
+    dir_matConvNet='./dcnf-fcsp/libs/matconvnet_20141015/matlab/';
     addpath(genpath(dir_matConvNet));
     run([dir_matConvNet 'vl_setupnn.m']);
 
@@ -17,14 +17,14 @@ function predict_depth()
     opts.useGpu=true;
     opts.inpaint = true;
     opts.normalize_depth = false; % limit depth to [0,1]
-    opts.imdir = '/path/to/image/dir';
+    opts.imdir = './bg';
 
-    opts.out_h5 = '/path/to/save/output/depth.h5';
+    opts.out_h5 = './depth.h5';
 
     % these should point to the pre-trained models from:
     %  https://bitbucket.org/fayao/dcnf-fcsp/
-    opts.model_file.indoor =  '../model_trained/model_dcnf-fcsp_NYUD2';
-    opts.model_file.outdoor =  '../model_trained/model_dcnf-fcsp_Make3D';
+    opts.model_file.indoor =  './dcnf-fcsp/model_trained/model_dcnf-fcsp_NYUD2';
+    opts.model_file.outdoor =  './dcnf-fcsp/model_trained/model_dcnf-fcsp_Make3D';
 
     fprintf('\nloading trained model...\n\n');
     mdl = load(opts.model_file.indoor);
