@@ -22,6 +22,15 @@ gopro/pics/demo/*
 gopro/pics/volo1/*
 gopro/pics/volo2/*
 /afc/datasets/*
+/afc/chars_rec/chars74k-master/summaries/
+/afc/chars_rec/chars74k-master/saves/
+/afc/chars_rec/chars74k-master/img/
+/afc/chars_rec/chars74k-master/datasplits/
+/afc/chars_rec/chars74k-master/readme.md
+/afc/chars_rec/chars74k-master/requirements.txt
+/afc/chars_rec/checkpoints/
+/afc/chars_rec/summaries/
+/afc/make_dataset/img/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -152,11 +161,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-/afc/chars_rec/chars74k-master/summaries/
-/afc/chars_rec/chars74k-master/saves/
-/afc/chars_rec/chars74k-master/img/
-/afc/chars_rec/chars74k-master/datasplits/
-/afc/chars_rec/chars74k-master/readme.md
-/afc/chars_rec/chars74k-master/requirements.txt
-/afc/chars_rec/checkpoints/
-/afc/chars_rec/summaries/
