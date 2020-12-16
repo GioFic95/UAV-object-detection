@@ -4,6 +4,7 @@ import cv2
 import os
 import numpy as np
 from PIL import Image
+from imutils import rotate, rotate_bound
 
 dataset = ""
 
@@ -161,27 +162,33 @@ def new_join(bg_path, seg_db_path, depth_db_path, out_path, depth='all_white'):
     out_db.close()
 
 
-def test_bb():
-    img = cv2.imread('./img/bg_true/DSC03373.JPG')
+def test_bb(img_path='./img/bg_true/DSC03373.JPG', out_path='./img/bg_true/test.jpg', starts=None, rots=None):
+    img = cv2.imread(img_path)
     img = cv2.resize(img, (600, 450))
 
-    starts = [
-        [(62, 140), (109, 140), (62, 187), (109, 187)],
-        [(257, 180), (298, 180), (257, 229), (298, 229)],
-        [(457, 270), (495, 270), (457, 294), (495, 294)]
-    ]
+    if starts is None:
+        starts = [
+            [(62, 140), (109, 140), (62, 187), (109, 187)],
+            [(257, 180), (298, 180), (257, 229), (298, 229)],
+            [(457, 270), (495, 270), (457, 294), (495, 294)]
+        ]
     w, h = 30, 35
 
-    for start in starts:
+    for i, start in enumerate(starts):
         locw = start[2][1] - start[0][1]
         loch = start[1][0] - start[0][0]
         loc = (start[0][1] + round(locw / 2 - h / 2), start[0][0] + round(loch / 2 - w / 2))
         print(locw, loch, loc)
 
+        if rots is not None:
+            print("rotate", rots[i])
+            img = rotate(img, angle=rots[i])
+
+        print(start[0], start[3])
         cv2.rectangle(img, start[0], start[3], (255, 0, 0), 1)
         cv2.rectangle(img, (loc[1], loc[0]), (loc[1] + w, loc[0] + h), (0, 0, 255), 1)
 
-    cv2.imwrite('./img/bg_true/test.jpg', img)
+    cv2.imwrite(out_path, img)
 
 
 if __name__ == '__main__':
@@ -197,5 +204,11 @@ if __name__ == '__main__':
     # describe("SynthText/data/new_test_db3.h5")
     # new_join("./SynthText/prep_scripts/true_bg", "./SynthText/data/seg_uint16.h5", "./SynthText/data/depth.h5", "SynthText/data/new_test_db4.h5")
     # describe("SynthText/data/new_test_db4.h5")
+    # describe("./SynthText/results/newTestSynthText.h5")
     # test_bb()
-    describe("./SynthText/results/newTestSynthText.h5")
+
+    # (272, 188, 48, 57) --> (255.0, 176.25, 45.0, 53.4375)
+    test_bb(img_path="./labeling/test_img/FakeTestSynthText.h5_data-DSC03373.JPG_19.jpg",
+            out_path="./labeling/test_img/test.jpg",
+            starts=[[(255, 176), (300, 176), (255, 230), (300, 230)]],
+            rots=[-26])

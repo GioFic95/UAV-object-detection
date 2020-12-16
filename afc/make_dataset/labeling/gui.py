@@ -3,21 +3,31 @@ import json
 import os
 import shutil
 import sys
-import datetime
+import string
 
 import cv2
 import numpy as np
+from scipy import ndimage
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QPixmap, QImage, QKeySequence
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QLineEdit, QComboBox, QShortcut, QMessageBox, \
-    QInputDialog, QFileDialog
+    QInputDialog, QFileDialog, QSpinBox
 from auto_mode import autoROI
-from imutils import resize, rotate
+from imutils import rotate, resize, rotate_bound
 
 
 # Adapted from:
 # Sapienza Flight Team - Roma - User Interface - ODLC
 # @Francesco Corallo  @Michiel Firlefyn
+
+
+def add_grid(img):
+    out = img.copy()
+    cv2.line(out, (int(img.shape[1] / 3), 0), (int(img.shape[1] / 3), img.shape[0]), (255, 0, 0), 2)
+    cv2.line(out, (int(img.shape[1]*2 / 3), 0), (int(img.shape[1]*2 / 3), img.shape[0]), (255, 0, 0), 2)
+    cv2.line(out, (0, int(img.shape[0] / 3)), (img.shape[1], int(img.shape[0] / 3)), (255, 0, 0), 2)
+    cv2.line(out, (0, int(img.shape[0]*2 / 3)), (img.shape[1], int(img.shape[0]*2 / 3)), (255, 0, 0), 2)
+    return out
 
 
 class App(QWidget):  # main window
@@ -193,14 +203,16 @@ class App(QWidget):  # main window
         self.dialogs.append(dialog)
         dialog.show()
 
-    def Crop(self, regions):
+    def Crop(self, regions, img=None):
+        if img is None:
+            img = self.img_resized
         # if False in poslst:
         #	ind = len(poslst) - 1 - poslst[::-1].index(False)
         #	imgCrop = imglst[ind][int(regions[1]):int(regions[1]+regions[3]), int(regions[0]):int(regions[0]+regions[2])]
         # else:
         #	imgCrop = imglst[-1][int(regions[1]):int(regions[1]+regions[3]), int(regions[0]):int(regions[0]+regions[2])]
-        img_crop = self.img_resized[int(regions[1]):int(regions[1] + regions[3]),
-                   int(regions[0]):int(regions[0] + regions[2])]
+        img_crop = img[int(regions[1]):int(regions[1] + regions[3]),
+                       int(regions[0]):int(regions[0] + regions[2])]
         print("crop:", regions)
         return img_crop
 
@@ -252,6 +264,9 @@ class App(QWidget):  # main window
         cv2.destroyAllWindows()
         # self.regions = deepcopy(r)
         self.img_cropped = self.Crop(self.regions)
+        if self.regions[2] == 0 and self.regions[3] == 0:
+            print("self.regions empty")
+            return
         self.dialog()
 
     def on_click_next(self):
@@ -287,9 +302,13 @@ class App(QWidget):  # main window
         self.label.setPixmap(pixmap)
 
     def on_click_zoom(self):
-        self.regions = cv2.selectROI(self.img_resized)
+        # self.regions = cv2.selectROI(self.img_resized)
+        self.regions = cv2.selectROI(self.image)
         cv2.destroyAllWindows()
-        self.img_cropped = self.Crop(self.regions)
+        if self.regions[2] == 0 and self.regions[3] == 0:
+            print("zoom regions empty")
+            return
+        self.img_cropped = self.Crop(self.regions, img=self.image)
         self.img_resized = resize(self.img_cropped, width=self.width)
         cvRGBImg = cv2.cvtColor(self.img_resized, cv2.COLOR_BGR2RGB)
         qimg = QImage(cvRGBImg.data, cvRGBImg.shape[1], cvRGBImg.shape[0], QImage.Format_RGB888)
@@ -330,6 +349,7 @@ class DialogApp(QWidget):  # Dialog window with cropped image
         self.imgCrop = img_cropped
         self.initUI()
         self.k = k
+        self.rotation = 0
 
     def initUI(self):
         self.setWindowTitle(self.title)
@@ -340,7 +360,8 @@ class DialogApp(QWidget):  # Dialog window with cropped image
         self.label1.move(30, 30)
         try:  # check if automatic mode has found something displayable
             self.img_resized1 = resize(self.imgCrop, width=self.width)
-            cvRGBImg1 = cv2.cvtColor(self.img_resized1, cv2.COLOR_BGR2RGB)
+            grid_img = add_grid(self.img_resized1)
+            cvRGBImg1 = cv2.cvtColor(grid_img, cv2.COLOR_BGR2RGB)
             qimg1 = QImage(cvRGBImg1.data, cvRGBImg1.shape[1], cvRGBImg1.shape[0], QImage.Format_RGB888)
             pixmap1 = QPixmap.fromImage(qimg1)
             self.label1.setPixmap(pixmap1)
@@ -358,28 +379,38 @@ class DialogApp(QWidget):  # Dialog window with cropped image
             self.shortcut_rotate = QShortcut(QKeySequence("Ctrl+r"), self)
             self.shortcut_rotate.activated.connect(self.on_click_rotate)
 
+            label_rotate = QLabel(self)  # letter color
+            label_rotate.setText('Shape rotation:')
+            label_rotate.move(0.05 * W1, 0.6 * H1)
+            label_rotate.setStyleSheet("font: {}pt Comic Sans MS".format(0.03 * H1))
+            self.textbox_rotation = QSpinBox(self)
+            self.textbox_rotation.setRange(-360, 360)
+            self.textbox_rotation.setWrapping(True)
+            self.textbox_rotation.move(0.05 * W1, 0.7 * H1)
+            self.textbox_rotation.valueChanged.connect(self.on_rotation_changed)
+
             label_lcolor = QLabel(self)  # letter color
             label_lcolor.setText('Letter Color:')
             label_lcolor.move(0.4255 * W1, 0.0444 * H1)
             label_lcolor.setStyleSheet("font: {}pt Comic Sans MS".format(0.03 * H1))
 
-            self.textbox_lcolor = QLineEdit(self)
-            self.textbox_lcolor.move(0.65 * W1, 0.0444 * H1)
+            # self.textbox_lcolor = QLineEdit(self)
+            # self.textbox_lcolor.move(0.65 * W1, 0.0444 * H1)
             # textbox_color.resize(100,40)
 
             # dropdown lcolor
             self.drop_lcolor = QComboBox(self)
             self.drop_lcolor.addItem("-")
-            self.drop_lcolor.addItem("WHITE")
             self.drop_lcolor.addItem("BLACK")
-            self.drop_lcolor.addItem("GRAY")
-            self.drop_lcolor.addItem("RED")
             self.drop_lcolor.addItem("BLUE")
-            self.drop_lcolor.addItem("GREEN")
-            self.drop_lcolor.addItem("YELLOW")
-            self.drop_lcolor.addItem("PURPLE")
             self.drop_lcolor.addItem("BROWN")
+            self.drop_lcolor.addItem("GRAY")
+            self.drop_lcolor.addItem("GREEN")
             self.drop_lcolor.addItem("ORANGE")
+            self.drop_lcolor.addItem("PURPLE")
+            self.drop_lcolor.addItem("RED")
+            self.drop_lcolor.addItem("WHITE")
+            self.drop_lcolor.addItem("YELLOW")
             self.drop_lcolor.move(0.84 * W1, 0.03 * H1)
             self.drop_lcolor.setStyleSheet('''* QComboBox QAbstractItemView { min-width: 100px;}''')
             # comboBox.activated[str].connect(self.update_fields)
@@ -390,22 +421,22 @@ class DialogApp(QWidget):  # Dialog window with cropped image
             label_bcolor.move(0.4255 * W1, 0.2 * H1)
             label_bcolor.setStyleSheet("font: {}pt Comic Sans MS".format(0.03 * H1))
 
-            self.textbox_bcolor = QLineEdit(self)
-            self.textbox_bcolor.move(0.65 * W1, 0.2 * H1)
+            # self.textbox_bcolor = QLineEdit(self)
+            # self.textbox_bcolor.move(0.65 * W1, 0.2 * H1)
             # textbox_color.resize(100,40)
 
             self.drop_bcolor = QComboBox(self)
             self.drop_bcolor.addItem("-")
-            self.drop_bcolor.addItem("WHITE")
             self.drop_bcolor.addItem("BLACK")
-            self.drop_bcolor.addItem("GRAY")
-            self.drop_bcolor.addItem("RED")
             self.drop_bcolor.addItem("BLUE")
-            self.drop_bcolor.addItem("GREEN")
-            self.drop_bcolor.addItem("YELLOW")
-            self.drop_bcolor.addItem("PURPLE")
             self.drop_bcolor.addItem("BROWN")
+            self.drop_bcolor.addItem("GRAY")
+            self.drop_bcolor.addItem("GREEN")
             self.drop_bcolor.addItem("ORANGE")
+            self.drop_bcolor.addItem("PURPLE")
+            self.drop_bcolor.addItem("RED")
+            self.drop_bcolor.addItem("WHITE")
+            self.drop_bcolor.addItem("YELLOW")
             self.drop_bcolor.move(0.84 * W1, 0.1856 * H1)
             self.drop_bcolor.setStyleSheet('''* QComboBox QAbstractItemView { min-width: 100px;}''')
 
@@ -414,39 +445,16 @@ class DialogApp(QWidget):  # Dialog window with cropped image
             label_letter.move(0.4255 * W1, 0.3556 * H1)
             label_letter.setStyleSheet("font: {}pt Comic Sans MS".format(0.03 * H1))
 
-            self.textbox_letter = QLineEdit(self)
-            self.textbox_letter.move(0.65 * W1, 0.3556 * H1)
-            self.textbox_letter.textChanged.connect(self.on_text_changed)
+            # self.textbox_letter = QLineEdit(self)
+            # self.textbox_letter.move(0.65 * W1, 0.3556 * H1)
+            # self.textbox_letter.textChanged.connect(self.on_text_changed)
             # textbox_color.resize(100,40)df
 
             self.drop_letter = QComboBox(self)
-            self.drop_letter.addItem("-           ")
-            self.drop_letter.addItem("A")
-            self.drop_letter.addItem("B")
-            self.drop_letter.addItem("C")
-            self.drop_letter.addItem("D")
-            self.drop_letter.addItem("E")
-            self.drop_letter.addItem("F")
-            self.drop_letter.addItem("G")
-            self.drop_letter.addItem("H")
-            self.drop_letter.addItem("I")
-            self.drop_letter.addItem("J")
-            self.drop_letter.addItem("K")
-            self.drop_letter.addItem("L")
-            self.drop_letter.addItem("M")
-            self.drop_letter.addItem("N")
-            self.drop_letter.addItem("O")
-            self.drop_letter.addItem("P")
-            self.drop_letter.addItem("Q")
-            self.drop_letter.addItem("R")
-            self.drop_letter.addItem("S")
-            self.drop_letter.addItem("T")
-            self.drop_letter.addItem("U")
-            self.drop_letter.addItem("V")
-            self.drop_letter.addItem("W")
-            self.drop_letter.addItem("X")
-            self.drop_letter.addItem("Y")
-            self.drop_letter.addItem("Z")
+            self.drop_letter.addItem("-")
+            chars = "0123456789AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz"
+            for i in chars:  # todo only uppercase?
+                self.drop_letter.addItem(i)
             self.drop_letter.move(0.84 * W1, 0.3412 * H1)
             self.drop_letter.setStyleSheet('''* QComboBox QAbstractItemView { min-width: 100px;}''')
 
@@ -455,29 +463,30 @@ class DialogApp(QWidget):  # Dialog window with cropped image
             label_bshape.move(0.4255 * W1, 0.5111 * H1)
             label_bshape.setStyleSheet("font: {}pt Comic Sans MS".format(0.03 * H1))
 
-            self.textbox_bshape = QLineEdit(self)
-            self.textbox_bshape.move(0.65 * W1, 0.5111 * H1)
+            # self.textbox_bshape = QLineEdit(self)
+            # self.textbox_bshape.move(0.65 * W1, 0.5111 * H1)
             # textbox_color.resize(100,40)
 
             self.drop_bshape = QComboBox(self)
             self.drop_bshape.addItem("-")
             self.drop_bshape.addItem("CIRCLE")
-            self.drop_bshape.addItem("SEMICIRCLE")
-            self.drop_bshape.addItem("QUARTER_CIRCLE")
-            self.drop_bshape.addItem("TRIANGLE")
-            self.drop_bshape.addItem("SQUARE")
-            self.drop_bshape.addItem("RECTANGLE")
-            self.drop_bshape.addItem("TRAPEZOID")
-            self.drop_bshape.addItem("PENTAGON")
-            self.drop_bshape.addItem("HEXAGON")
-            self.drop_bshape.addItem("HEPTAGON")
-            self.drop_bshape.addItem("OCTAGON")
-            self.drop_bshape.addItem("STAR")
             self.drop_bshape.addItem("CROSS")
+            self.drop_bshape.addItem("HEPTAGON")
+            self.drop_bshape.addItem("HEXAGON")
+            self.drop_bshape.addItem("OCTAGON")
+            self.drop_bshape.addItem("PENTAGON")
+            self.drop_bshape.addItem("QUARTER_CIRCLE")
+            self.drop_bshape.addItem("RECTANGLE")
+            self.drop_bshape.addItem("SEMICIRCLE")
+            self.drop_bshape.addItem("SQUARE")
+            self.drop_bshape.addItem("STAR")
+            self.drop_bshape.addItem("TRAPEZOID")
+            self.drop_bshape.addItem("TRIANGLE")
             self.drop_bshape.move(0.84 * W1, 0.4967 * H1)
             self.drop_bshape.setStyleSheet('''* QComboBox QAbstractItemView { min-width: 100px;}''')
 
             button_submit = QPushButton("Submit", self)
+            button_submit.setAutoDefault(True)
             button_submit.setToolTip("Submit results")
             button_submit.move(0.7895 * W1, 0.6667 * H1)
             button_submit.resize(0.1316 * W1, 0.2222 * H1)
@@ -492,58 +501,79 @@ class DialogApp(QWidget):  # Dialog window with cropped image
         self.shortcut_close = QShortcut(QKeySequence("Ctrl+w"), self)
         self.shortcut_close.activated.connect(self.close)
 
-    def Action1(self):
-        print("Red selected")
-
-    def on_text_changed(self):
-        # print('text_ changed')
-        pass
-
-    def on_click_rotate(self):
-        self.imgCrop = rotate(self.imgCrop, 90)
-        self.img_resized1 = resize(self.imgCrop, width=self.width)
-        cvRGBImg1 = cv2.cvtColor(self.img_resized1, cv2.COLOR_BGR2RGB)
+    def on_rotation_changed(self):
+        rotation = self.textbox_rotation.value()
+        self.img_resized1 = ndimage.rotate(self.img_resized1, rotation-self.rotation, reshape=False)
+        grid_img = add_grid(self.img_resized1)
+        cvRGBImg1 = cv2.cvtColor(grid_img, cv2.COLOR_BGR2RGB)
         qimg1 = QImage(cvRGBImg1.data, cvRGBImg1.shape[1], cvRGBImg1.shape[0], QImage.Format_RGB888)
         pixmap1 = QPixmap.fromImage(qimg1)
         self.label1.setPixmap(pixmap1)
         self.update()
 
+        self.rotation = rotation
+        print('rotation:', self.rotation)
+
+    def on_click_rotate(self):
+        self.textbox_rotation.setValue((self.rotation+90) % 360)
+
     @pyqtSlot()
     def on_click_submit(self):
-        if not '-' in self.drop_bshape.currentText():
-            chosen_bshape = self.drop_bshape.currentText().upper()
-        else:
-            chosen_bshape = self.textbox_bshape.text().upper()
-            if chosen_bshape == "":
-                chosen_bshape = None
-
-        if '-' not in self.drop_bcolor.currentText():
-            chosen_bcolor = self.drop_bcolor.currentText()
-        else:
-            chosen_bcolor = self.textbox_bcolor.text().upper()
-            if chosen_bcolor == "":
-                chosen_bcolor = None
-
-        if '-' not in self.drop_letter.currentText():
-            chosen_letter = self.drop_letter.currentText()
-        else:
-            chosen_letter = self.textbox_letter.text().upper()
-            if chosen_letter == "":
-                chosen_letter = None
+        empty = []
 
         if '-' not in self.drop_lcolor.currentText():
             chosen_lcolor = self.drop_lcolor.currentText()
         else:
-            chosen_lcolor = self.textbox_lcolor.text().upper()
-            if chosen_lcolor == "":
-                chosen_lcolor = None
+            chosen_lcolor = ""
+            empty += ["'Letter Color'"]
+            print("no lcolor choosen")
+
+        if '-' not in self.drop_bcolor.currentText():
+            chosen_bcolor = self.drop_bcolor.currentText()
+        else:
+            chosen_bcolor = ""
+            empty += ["'Background Color'"]
+            print("no bcolor chosen")
+
+        if '-' not in self.drop_letter.currentText():
+            chosen_letter = self.drop_letter.currentText()
+        else:
+            chosen_letter = ""
+            empty += ["'Alphanumerical'"]
+            print("no char chosen")
+
+        if not '-' in self.drop_bshape.currentText():
+            chosen_bshape = self.drop_bshape.currentText().upper()
+        else:
+            chosen_bshape = ""
+            empty += ["'Background Shape'"]
+            print("no shape chosen")
+
+        if empty:
+            reply = QMessageBox.question(self, 'Empty Fields',
+                                         f"The field(s) {', '.join(empty)} are still empty,\n"
+                                         f"do you want to submit anyway?",
+                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if reply == QMessageBox.No:
+                return
+
+        # p : x = self.img_resized.shape : self.image.shape --> x = p*self.image.shape/self.img_resized.shape
+        regions = [
+            ex.regions[0] * ex.image.shape[0] / ex.img_resized.shape[0],
+            ex.regions[1] * ex.image.shape[1] / ex.img_resized.shape[1],
+            ex.regions[2] * ex.image.shape[0] / ex.img_resized.shape[0],
+            ex.regions[3] * ex.image.shape[1] / ex.img_resized.shape[1]
+        ]
 
         odlc_dict = {
-            # todo: name, position, rotation...
+            'name': pics[str(ex.k)],
             'shape': chosen_bshape,
             'shapeColor': chosen_bcolor,
             'alphanumeric': chosen_letter,
-            'alphanumericColor': chosen_lcolor}
+            'alphanumericColor': chosen_lcolor,
+            'bounding_box': regions,
+            'rotation': self.rotation
+        }
         odlc_json = json.dumps(odlc_dict)
 
         # check with local submitted list, and with backup if object has been yet submitted
@@ -563,24 +593,7 @@ class DialogApp(QWidget):  # Dialog window with cropped image
         elif odlc_json in backup_jsons:
             print('This object is present in the backup folder')
 
-        # App().dialog_submitted.refresh_window(self.img_resized1)  # todo reset whole image after zoom ?
         self.close()
-
-    def decode_error(self, response):
-        print(response)
-        if '400' in str(response):
-            print('The request was bad/invalid, the server does not know how to respond to such a request')
-        elif '401' in str(response):
-            print('The request is unauthorized')
-        elif '403' in str(response):
-            print('The request is forbidden')
-        elif '404' in str(response):
-            print('The request was made to an invalid URL')
-        elif '405' in str(response):
-            print('The request used an invalid method (e.g., GET when only POST is supported')
-        elif '500' in str(response):
-            print(
-                'The server encountered an internal error and was unable to process the request. This indicates a configuration error on the server side.')
 
 
 class DialogSubmitted(QWidget):  # Dialog window with cropped image
@@ -662,7 +675,7 @@ if __name__ == '__main__':
     ctrl+[ = previous
     ctrl+] = next
     ctrl+S = submit
-    ctrl+R = rotate
+    # ctrl+R = rotate
     ctrl+W = close window\n
     Check README.txt for more\n\n"""
 
