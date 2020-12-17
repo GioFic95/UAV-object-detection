@@ -13,7 +13,7 @@ from PyQt5.QtGui import QPixmap, QImage, QKeySequence
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QLineEdit, QComboBox, QShortcut, QMessageBox, \
     QInputDialog, QFileDialog, QSpinBox
 from auto_mode import autoROI
-from imutils import rotate, resize, rotate_bound
+from imutils import resize
 
 
 # Adapted from:
@@ -41,7 +41,8 @@ class App(QWidget):  # main window
         self.height = 480
         self.dialogs = list()
         self.selectDir()
-        self.setDirAndBackup()
+        self.selectSave()
+        self.setDirAndSave()
         self.initUI()
 
     def initUI(self):
@@ -56,8 +57,10 @@ class App(QWidget):  # main window
         print("Start.")
         print('')
         QMessageBox.about(self, "Info", help_message)
-        corrupted_check = 1
         self.on_click_next()
+        while pics[str(self.k)] in submitted:
+            print("pic:", pics[str(self.k)])
+            self.on_click_next()
         try:
             self.img_resized
         except:
@@ -132,16 +135,11 @@ class App(QWidget):  # main window
         self.shortcut_close = QShortcut(QKeySequence("Ctrl+w"), self)
         self.shortcut_close.activated.connect(self.close)
 
-    # self.dialog_submitted = DialogSubmitted()
-    # self.dialogs.append(self.dialog_submitted)
-    # self.dialog_submitted.show()
-
     def selectDir(self):
         try:
             global directoryPath
             print('Images folder set to: ' + directoryPath)
         except:
-            # fileName = QFileDialog.getOpenFileName(self, 'OpenFile')
             print('')
             print('Please select objects images directory ')
             print('')
@@ -149,54 +147,39 @@ class App(QWidget):  # main window
             options |= QFileDialog.DontUseNativeDialog
             directoryPath = str(
                 QFileDialog.getExistingDirectory(self, "Select Objects Images directory", options=options))
-            # self.myTextBox.setText(fileName)
             print('Images folder set to: ' + directoryPath)
 
-    def setDirAndBackup(self):
+    def selectSave(self):
+        try:
+            global save_path
+            print('Save folder set to: ' + save_path)
+        except:
+            print('')
+            print('Please select save directory ')
+            print('')
+            options = QFileDialog.Options()
+            options |= QFileDialog.DontUseNativeDialog
+            save_path = str(
+                QFileDialog.getExistingDirectory(self, "Select results directory", options=options))
+            print('Save folder set to: ' + save_path)
+
+    def setDirAndSave(self):
         global counter
-        global backup_num
         directory = os.fsencode(directoryPath)
         for file in os.listdir(directory):
             filename = os.fsdecode(file)
-            pics[str(counter)] = filename  # pics['id: ' + str(counter)] = filename
+            pics[str(counter)] = filename
             counter += 1
             continue
 
-        # num = 1
-        # code for creating a new backup instead of overwriting the old one
-        if os.path.exists(directoryPath + '/../backup'):  # + str(num)):
-            ask = 0
-            while ask == 0:
-                buttonReply = QMessageBox.question(self, 'PyQt5 message',
-                                                   "A backup folder exist. Do you want to use it?",
-                                                   QMessageBox.No | QMessageBox.Yes)  # , QMessageBox.No)
-                # ask = input('\nA backup folder exist. Do you want to use it? answer: y or n \n')
-                if buttonReply == QMessageBox.Yes:
-                    # num = input('input the number of the desired backup folder:\n')
-                    backup_num = '/../backup'  # + str(num)
-                    ask = 1
-                    backup_used = 1
-                elif buttonReply == QMessageBox.No:
-                    shutil.rmtree(directoryPath + '/../backup')  # + str(num))
-                    os.mkdir(directoryPath + '/../backup')  # + str(num))
-                    backup_num = '/../backup'  # + str(num)
-                    ask = 1
-                    backup_used = 0
-                else:
-                    print('answer y or n')
-                    ask = 0
+        # if the save dir isn't empty, load the names of the saved images
+        if not os.path.exists(save_path):
+            os.mkdir(save_path)
         else:
-            os.mkdir(directoryPath + '/../backup')  # + str(num))
-            backup_num = '/../backup'  # + str(num)
-
-        backup_directory = os.fsencode(directoryPath + backup_num)
-        for file in os.listdir(backup_directory):
-            filename = os.fsdecode(file)
-            if 'json' in filename:
-                current_file = open(directoryPath + backup_num + '/' + filename)
-                current_json = json.load(current_file)
-                # current_json_wout_id.pop('id')
-                backup_jsons.append(current_json)
+            names = os.listdir(save_path)
+            global submitted
+            submitted.update([name.split("_")[0] for name in names])
+            print("submitted:", submitted)
 
     def dialog(self):
         dialog = DialogApp(self.img_cropped, self.k)
@@ -206,11 +189,6 @@ class App(QWidget):  # main window
     def Crop(self, regions, img=None):
         if img is None:
             img = self.img_resized
-        # if False in poslst:
-        #	ind = len(poslst) - 1 - poslst[::-1].index(False)
-        #	imgCrop = imglst[ind][int(regions[1]):int(regions[1]+regions[3]), int(regions[0]):int(regions[0]+regions[2])]
-        # else:
-        #	imgCrop = imglst[-1][int(regions[1]):int(regions[1]+regions[3]), int(regions[0]):int(regions[0]+regions[2])]
         img_crop = img[int(regions[1]):int(regions[1] + regions[3]),
                        int(regions[0]):int(regions[0] + regions[2])]
         print("crop:", regions)
@@ -279,7 +257,6 @@ class App(QWidget):  # main window
             while corrupted_check == 1:
                 if self.k == counter:
                     print("No more images !")
-                    # self.k = counter-1
                     break
                 else:
                     self.k += 1
@@ -542,7 +519,7 @@ class DialogApp(QWidget):  # Dialog window with cropped image
             empty += ["'Alphanumerical'"]
             print("no char chosen")
 
-        if not '-' in self.drop_bshape.currentText():
+        if '-' not in self.drop_bshape.currentText():
             chosen_bshape = self.drop_bshape.currentText().upper()
         else:
             chosen_bshape = ""
@@ -576,22 +553,12 @@ class DialogApp(QWidget):  # Dialog window with cropped image
         }
         odlc_json = json.dumps(odlc_dict)
 
-        # check with local submitted list, and with backup if object has been yet submitted
-        if (not odlc_json in submitted) and (not odlc_json in backup_jsons):
-            global submitcount
-            submitcount += 1
-            print("OBJECT SUBMITTED.     number of submitted objects: " + str(submitcount))
-            submitted.append(odlc_json)
-            # save to backup folder:
-            out = directoryPath + backup_num + '/' + str(len(backup_jsons)+submitcount) + "_" + ".json"
-            json_backup = open(out, "w")
-            json_backup.write(odlc_json)
-
-        elif odlc_json in submitted:
-            print('This object has been already submitted !')
-
-        elif odlc_json in backup_jsons:
-            print('This object is present in the backup folder')
+        global submitcount
+        submitcount += 1
+        print("OBJECT SUBMITTED.     number of submitted objects: " + str(submitcount))
+        out = os.path.join(save_path, pics[str(ex.k)] + "_" + str(len(submitted) + submitcount) + ".json")
+        with open(out, 'w') as save_file:
+            save_file.write(odlc_json)
 
         self.close()
 
@@ -617,14 +584,6 @@ class DialogSubmitted(QWidget):  # Dialog window with cropped image
         self.label_letter.setStyleSheet("font: {}pt Comic Sans MS".format(0.1 * self.height))
 
     def refresh_window(self, image):
-        # self.label = QLabel(self)
-        # self.label.move(30, 30)
-        # self.img_resized = resize(image, 10)
-        # cvRGBImg = cv2.cvtColor(self.img_resized, cv2.COLOR_BGR2RGB)
-        # qimg = QImage(cvRGBImg.data, cvRGBImg.shape[1], cvRGBImg.shape[0], QImage.Format_RGB888)
-        # pixmap = QPixmap.fromImage(qimg)
-        # self.label.setPixmap(pixmap)
-
         self.label_letter = QLabel(self)
         self.label_letter.setText('modificato')
         self.label_letter.move(0.4255 * self.width, 0.1 * self.height)
@@ -632,15 +591,17 @@ class DialogSubmitted(QWidget):  # Dialog window with cropped image
         self.update()
 
 
-# python gui.py -dir ./test_img
+# python gui.py -dir ./test_img -save results
 if __name__ == '__main__':
     # arguments
     ap = argparse.ArgumentParser()
     ap.add_argument('-dir', '--directory', required=False, help='Path to images directory')
+    ap.add_argument('-save', '--save', required=False, help='Path to save directory')
     args = vars(ap.parse_args())
 
     # variables from arguments
     directoryPath = args['directory']
+    save_path = args['save']
 
     pics = {}
     counter = 1
@@ -648,17 +609,8 @@ if __name__ == '__main__':
     imglst = []
     poslst = []
 
-    submitted = []
+    submitted = set()
     submitcount = 0
-
-    backup_jsons = []
-
-    backup_used = 0
-
-    # login
-    # session = requests.Session()
-    # session.post('http://' + url + '/api/login', data=json.dumps({'username': username, 'password': password}))
-    # cookie = session.cookies
 
     help_message = """Rules:\nObject must fill 25%+ of the cropped image.\n
     Tips:
