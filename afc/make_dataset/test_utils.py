@@ -204,11 +204,11 @@ if __name__ == '__main__':
     # describe("SynthText/data/new_test_db3.h5")
     # new_join("./SynthText/prep_scripts/true_bg", "./SynthText/data/seg_uint16.h5", "./SynthText/data/depth.h5", "SynthText/data/new_test_db4.h5")
     # describe("SynthText/data/new_test_db4.h5")
-    # describe("./SynthText/results/newTestSynthText.h5")
+    describe("./SynthText/results/NewTestSynthText.h5")
     # test_bb()
 
     # (272, 188, 48, 57) --> (255.0, 176.25, 45.0, 53.4375)
-    test_bb(img_path="./labeling/test_img/FakeTestSynthText.h5_data-DSC03373.JPG_19.jpg",
-            out_path="./labeling/test_img/test.jpg",
-            starts=[[(255, 176), (300, 176), (255, 230), (300, 230)]],
-            rots=[-26])
+    # test_bb(img_path="./labeling/test_img/FakeTestSynthText.h5_data-DSC03373.JPG_19.jpg",
+    #         out_path="./labeling/test_img/test.jpg",
+    #         starts=[[(255, 176), (300, 176), (255, 230), (300, 230)]],
+    #         rots=[-26])

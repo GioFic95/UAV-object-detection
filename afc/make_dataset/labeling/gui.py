@@ -7,6 +7,7 @@ import string
 
 import cv2
 import numpy as np
+import pandas as pd
 from scipy import ndimage
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QPixmap, QImage, QKeySequence
@@ -143,25 +144,25 @@ class App(QWidget):  # main window
             print('')
             print('Please select objects images directory ')
             print('')
-            options = QFileDialog.Options()
-            options |= QFileDialog.DontUseNativeDialog
             directoryPath = str(
-                QFileDialog.getExistingDirectory(self, "Select Objects Images directory", options=options))
+                QFileDialog.getExistingDirectory(self,
+                                                 "Select Objects Images directory",
+                                                 directory=os.getcwd()))
             print('Images folder set to: ' + directoryPath)
 
     def selectSave(self):
         try:
             global save_path
-            print('Save folder set to: ' + save_path)
+            print('Save file set to: ' + save_path)
         except:
             print('')
-            print('Please select save directory ')
+            print('Please select save file')
             print('')
-            options = QFileDialog.Options()
-            options |= QFileDialog.DontUseNativeDialog
-            save_path = str(
-                QFileDialog.getExistingDirectory(self, "Select results directory", options=options))
-            print('Save folder set to: ' + save_path)
+            save_path = str(QFileDialog.getOpenFileName(self,
+                                                        "Select results file",
+                                                        directory=os.getcwd(),
+                                                        filter="*.tsv")[0])
+            print('Save file set to: ' + save_path)
 
     def setDirAndSave(self):
         global counter
@@ -173,13 +174,28 @@ class App(QWidget):  # main window
             continue
 
         # if the save dir isn't empty, load the names of the saved images
+        global save_path
         if not os.path.exists(save_path):
-            os.mkdir(save_path)
+            try:
+                os.mkdir(save_path)
+                save_path = os.path.join(save_path, "results.tsv")
+            except:
+                if not os.path.exists("results"):
+                    os.mkdir("results")
+                if save_path == "":
+                    save_path = "results.tsv"
+                save_path = os.path.join("results", save_path)
+            columns = "name\tshape\tshapeColor\talphanumeric\talphanumericColor\tbounding_box\trotation\n"
+            with open(save_path, 'w') as save_file:
+                save_file.write(columns)
         else:
-            names = os.listdir(save_path)
+            df = pd.read_csv(save_path, sep='\t')
+            print(df.dtypes)
+            names = df["name"].values
             global submitted
             submitted.update([name.split("_")[0] for name in names])
             print("submitted:", submitted)
+        print("save_path:", save_path)
 
     def dialog(self):
         dialog = DialogApp(self.img_cropped, self.k)
@@ -366,41 +382,31 @@ class DialogApp(QWidget):  # Dialog window with cropped image
             self.textbox_rotation.move(0.05 * W1, 0.7 * H1)
             self.textbox_rotation.valueChanged.connect(self.on_rotation_changed)
 
-            label_lcolor = QLabel(self)  # letter color
-            label_lcolor.setText('Letter Color:')
-            label_lcolor.move(0.4255 * W1, 0.0444 * H1)
-            label_lcolor.setStyleSheet("font: {}pt Comic Sans MS".format(0.03 * H1))
-
-            # self.textbox_lcolor = QLineEdit(self)
-            # self.textbox_lcolor.move(0.65 * W1, 0.0444 * H1)
-            # textbox_color.resize(100,40)
+            # label_lcolor = QLabel(self)  # letter color
+            # label_lcolor.setText('Letter Color:')
+            # label_lcolor.move(0.4255 * W1, 0.0444 * H1)
+            # label_lcolor.setStyleSheet("font: {}pt Comic Sans MS".format(0.03 * H1))
 
             # dropdown lcolor
-            self.drop_lcolor = QComboBox(self)
-            self.drop_lcolor.addItem("-")
-            self.drop_lcolor.addItem("BLACK")
-            self.drop_lcolor.addItem("BLUE")
-            self.drop_lcolor.addItem("BROWN")
-            self.drop_lcolor.addItem("GRAY")
-            self.drop_lcolor.addItem("GREEN")
-            self.drop_lcolor.addItem("ORANGE")
-            self.drop_lcolor.addItem("PURPLE")
-            self.drop_lcolor.addItem("RED")
-            self.drop_lcolor.addItem("WHITE")
-            self.drop_lcolor.addItem("YELLOW")
-            self.drop_lcolor.move(0.84 * W1, 0.03 * H1)
-            self.drop_lcolor.setStyleSheet('''* QComboBox QAbstractItemView { min-width: 100px;}''')
-            # comboBox.activated[str].connect(self.update_fields)
-            ## Colors
+            # self.drop_lcolor = QComboBox(self)
+            # self.drop_lcolor.addItem("-")
+            # self.drop_lcolor.addItem("BLACK")
+            # self.drop_lcolor.addItem("BLUE")
+            # self.drop_lcolor.addItem("BROWN")
+            # self.drop_lcolor.addItem("GRAY")
+            # self.drop_lcolor.addItem("GREEN")
+            # self.drop_lcolor.addItem("ORANGE")
+            # self.drop_lcolor.addItem("PURPLE")
+            # self.drop_lcolor.addItem("RED")
+            # self.drop_lcolor.addItem("WHITE")
+            # self.drop_lcolor.addItem("YELLOW")
+            # self.drop_lcolor.move(0.84 * W1, 0.03 * H1)
+            # self.drop_lcolor.setStyleSheet('''* QComboBox QAbstractItemView { min-width: 100px;}''')
 
             label_bcolor = QLabel(self)  # background color
             label_bcolor.setText('Background Color:')
             label_bcolor.move(0.4255 * W1, 0.2 * H1)
             label_bcolor.setStyleSheet("font: {}pt Comic Sans MS".format(0.03 * H1))
-
-            # self.textbox_bcolor = QLineEdit(self)
-            # self.textbox_bcolor.move(0.65 * W1, 0.2 * H1)
-            # textbox_color.resize(100,40)
 
             self.drop_bcolor = QComboBox(self)
             self.drop_bcolor.addItem("-")
@@ -417,32 +423,23 @@ class DialogApp(QWidget):  # Dialog window with cropped image
             self.drop_bcolor.move(0.84 * W1, 0.1856 * H1)
             self.drop_bcolor.setStyleSheet('''* QComboBox QAbstractItemView { min-width: 100px;}''')
 
-            label_letter = QLabel(self)  # letter
-            label_letter.setText('Alphanumerical:')
-            label_letter.move(0.4255 * W1, 0.3556 * H1)
-            label_letter.setStyleSheet("font: {}pt Comic Sans MS".format(0.03 * H1))
+            # label_letter = QLabel(self)  # letter
+            # label_letter.setText('Alphanumerical:')
+            # label_letter.move(0.4255 * W1, 0.3556 * H1)
+            # label_letter.setStyleSheet("font: {}pt Comic Sans MS".format(0.03 * H1))
 
-            # self.textbox_letter = QLineEdit(self)
-            # self.textbox_letter.move(0.65 * W1, 0.3556 * H1)
-            # self.textbox_letter.textChanged.connect(self.on_text_changed)
-            # textbox_color.resize(100,40)df
-
-            self.drop_letter = QComboBox(self)
-            self.drop_letter.addItem("-")
-            chars = "0123456789AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz"
-            for i in chars:  # todo only uppercase?
-                self.drop_letter.addItem(i)
-            self.drop_letter.move(0.84 * W1, 0.3412 * H1)
-            self.drop_letter.setStyleSheet('''* QComboBox QAbstractItemView { min-width: 100px;}''')
+            # self.drop_letter = QComboBox(self)
+            # self.drop_letter.addItem("-")
+            # chars = "0123456789AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz"
+            # for i in chars:  # only uppercase?
+            #     self.drop_letter.addItem(i)
+            # self.drop_letter.move(0.84 * W1, 0.3412 * H1)
+            # self.drop_letter.setStyleSheet('''* QComboBox QAbstractItemView { min-width: 100px;}''')
 
             label_bshape = QLabel(self)  # background shape
             label_bshape.setText('Background Shape:')
             label_bshape.move(0.4255 * W1, 0.5111 * H1)
             label_bshape.setStyleSheet("font: {}pt Comic Sans MS".format(0.03 * H1))
-
-            # self.textbox_bshape = QLineEdit(self)
-            # self.textbox_bshape.move(0.65 * W1, 0.5111 * H1)
-            # textbox_color.resize(100,40)
 
             self.drop_bshape = QComboBox(self)
             self.drop_bshape.addItem("-")
@@ -498,12 +495,12 @@ class DialogApp(QWidget):  # Dialog window with cropped image
     def on_click_submit(self):
         empty = []
 
-        if '-' not in self.drop_lcolor.currentText():
-            chosen_lcolor = self.drop_lcolor.currentText()
-        else:
-            chosen_lcolor = ""
-            empty += ["'Letter Color'"]
-            print("no lcolor choosen")
+        # if '-' not in self.drop_lcolor.currentText():
+        #     chosen_lcolor = self.drop_lcolor.currentText()
+        # else:
+        #     chosen_lcolor = ""
+        #     empty += ["'Letter Color'"]
+        #     print("no lcolor choosen")
 
         if '-' not in self.drop_bcolor.currentText():
             chosen_bcolor = self.drop_bcolor.currentText()
@@ -512,12 +509,12 @@ class DialogApp(QWidget):  # Dialog window with cropped image
             empty += ["'Background Color'"]
             print("no bcolor chosen")
 
-        if '-' not in self.drop_letter.currentText():
-            chosen_letter = self.drop_letter.currentText()
-        else:
-            chosen_letter = ""
-            empty += ["'Alphanumerical'"]
-            print("no char chosen")
+        # if '-' not in self.drop_letter.currentText():
+        #     chosen_letter = self.drop_letter.currentText()
+        # else:
+        #     chosen_letter = ""
+        #     empty += ["'Alphanumerical'"]
+        #     print("no char chosen")
 
         if '-' not in self.drop_bshape.currentText():
             chosen_bshape = self.drop_bshape.currentText().upper()
@@ -542,23 +539,15 @@ class DialogApp(QWidget):  # Dialog window with cropped image
             ex.regions[3] * ex.image.shape[1] / ex.img_resized.shape[1]
         ]
 
-        odlc_dict = {
-            'name': pics[str(ex.k)],
-            'shape': chosen_bshape,
-            'shapeColor': chosen_bcolor,
-            'alphanumeric': chosen_letter,
-            'alphanumericColor': chosen_lcolor,
-            'bounding_box': regions,
-            'rotation': self.rotation
-        }
-        odlc_json = json.dumps(odlc_dict)
+        # odlc_tsv = f"{pics[str(ex.k)]}\t{chosen_bshape}\t{chosen_bcolor}\t{chosen_letter}\t{chosen_lcolor}\t" \
+        odlc_tsv = f"{pics[str(ex.k)]}\t{chosen_bshape}\t{chosen_bcolor}\t\t\t" \
+                   f"[{regions[0]},{regions[1]},{regions[0]+regions[2]},{regions[1]+regions[3]}]\t{self.rotation}\n"
 
         global submitcount
         submitcount += 1
         print("OBJECT SUBMITTED.     number of submitted objects: " + str(submitcount))
-        out = os.path.join(save_path, pics[str(ex.k)] + "_" + str(len(submitted) + submitcount) + ".json")
-        with open(out, 'w') as save_file:
-            save_file.write(odlc_json)
+        with open(save_path, 'a') as save_file:
+            save_file.write(odlc_tsv)
 
         self.close()
 

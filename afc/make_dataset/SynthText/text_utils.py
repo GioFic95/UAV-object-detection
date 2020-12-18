@@ -250,9 +250,9 @@ class RenderFont(object):
         out_arr = np.zeros(shape)
         for i in order:
             w, h = text_arrs[i].shape
-            locw = start[2][1] - start[0][1]
-            loch = start[1][0] - start[0][0]
-            loc = np.array([start[0][1] + int(locw/2 - w/2), start[0][0] + int(loch/2-h/2)])
+            locw = start[3] - start[1]
+            loch = start[2] - start[0]
+            loc = np.array([start[1] + int(locw/2 - w/2), start[0] + int(loch/2-h/2)])
 
             # update the bounding-boxes:
             bbs[i] = move_bb(bbs[i], loc[::-1])
