@@ -111,9 +111,9 @@ class RendererV3(object):
         # feathering:
         text_mask = self.feather(text_mask, min_h)
 
-        im_final = self.colorizer.color(rgb, [text_mask], np.array([min_h]))
+        im_final, col_name = self.colorizer.color(rgb, [text_mask], np.array([min_h]))
 
-        return im_final, text, bb
+        return im_final, text, bb, col_name
 
     def char2wordBB(self, charBB, text):
         """
@@ -191,11 +191,12 @@ class RendererV3(object):
 
         res = []
         for i in range(ninstance):
-            idict = {'img': [], 'charBB': None, 'wordBB': None, 'txt': None}
+            idict = {'img': [], 'charBB': None, 'wordBB': None, 'txt': None, 'color': None}
             placed = False
             img = rgb.copy()
             itext = []
             ibb = []
+            icol = []
 
             # process regions: 
             for idx in range(nregions):
@@ -208,11 +209,12 @@ class RendererV3(object):
 
                 if txt_render_res is not None:
                     placed = True
-                    img, text, bb = txt_render_res
+                    img, text, bb, col_name = txt_render_res
                     print("text synth:", text)
                     # store the result:
                     itext.append(text)
                     ibb.append(bb)
+                    icol.append(col_name)
                 else:
                     print("txt_render_res is None")
 
@@ -222,6 +224,7 @@ class RendererV3(object):
                 idict['txt'] = itext
                 idict['charBB'] = np.concatenate(ibb, axis=2)
                 idict['wordBB'] = self.char2wordBB(idict['charBB'].copy(), ' '.join(itext))
+                idict['color'] = icol
                 res.append(idict.copy())
                 if viz:
                     viz_textbb(1, img, [idict['wordBB']], alpha=1.0)

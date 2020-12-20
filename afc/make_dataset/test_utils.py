@@ -191,6 +191,36 @@ def test_bb(img_path='./img/bg_true/DSC03373.JPG', out_path='./img/bg_true/test.
     cv2.imwrite(out_path, img)
 
 
+def test_yield():
+    import pandas as pd
+    import albumentations
+    SIZE = (600, 450)
+    transform = albumentations.Compose(
+        [albumentations.Resize(*SIZE)],
+        bbox_params=albumentations.BboxParams(format='pascal_voc', label_fields=['class_labels']),
+    )
+    df = pd.read_csv("labeling/results/results.tsv", sep='\t')
+    groups = df.groupby(by=['name'])
+    for g in groups:
+        name = g[0]
+        path = os.path.join("labeling/test_img", name)
+        image = cv2.imread(path)
+
+        row = g[1]
+        starts = [eval(x) for x in row["boundingBox"]]
+        rots = row["rotation"].values
+        shapes = row["shape"].values
+        transformed = transform(image=image, bboxes=starts, class_labels=shapes)
+
+        yield {"name": name, "image": transformed["image"], "starts": transformed["bboxes"], "rots": rots, "shapes": shapes}
+
+
+def test_test_yield():
+    for i, d in enumerate(test_yield()):
+        print(i, d)
+        print()
+
+
 if __name__ == '__main__':
     # test_h5()
     # describe("./SynthText/results/SynthText.h5")
@@ -204,7 +234,7 @@ if __name__ == '__main__':
     # describe("SynthText/data/new_test_db3.h5")
     # new_join("./SynthText/prep_scripts/true_bg", "./SynthText/data/seg_uint16.h5", "./SynthText/data/depth.h5", "SynthText/data/new_test_db4.h5")
     # describe("SynthText/data/new_test_db4.h5")
-    describe("./SynthText/results/NewTestSynthText.h5")
+    # describe("./SynthText/results/NewTestSynthText.h5")
     # test_bb()
 
     # (272, 188, 48, 57) --> (255.0, 176.25, 45.0, 53.4375)
@@ -212,3 +242,5 @@ if __name__ == '__main__':
     #         out_path="./labeling/test_img/test.jpg",
     #         starts=[[(255, 176), (300, 176), (255, 230), (300, 230)]],
     #         rots=[-26])
+
+    test_test_yield()

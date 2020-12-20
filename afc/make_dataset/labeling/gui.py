@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from scipy import ndimage
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtGui import QPixmap, QImage, QKeySequence
+from PyQt5.QtGui import QPixmap, QImage, QKeySequence, QFont
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QLineEdit, QComboBox, QShortcut, QMessageBox, \
     QInputDialog, QFileDialog, QSpinBox
 from auto_mode import autoROI
@@ -38,8 +38,8 @@ class App(QWidget):  # main window
         self.title = 'SFT User Interface - AUVSI SUAS'
         self.left = 100
         self.top = 10
-        self.width = 640
-        self.height = 480
+        self.width = 1200  # 640
+        self.height = 900  # 480
         self.dialogs = list()
         self.selectDir()
         self.selectSave()
@@ -58,10 +58,17 @@ class App(QWidget):  # main window
         print("Start.")
         print('')
         QMessageBox.about(self, "Info", help_message)
+        self.info_label = QLabel(self)
+        self.info_label.move(50, self.height - 50)
+        self.info_label.setFont(QFont('Arial', 20))
         self.on_click_next()
-        while pics[str(self.k)] in submitted:
-            print("pic:", pics[str(self.k)])
-            self.on_click_next()
+        try:
+            while pics[str(self.k)] in submitted:
+                print("pic:", pics[str(self.k)])
+                self.on_click_next()
+        except KeyError:
+            print("sorry")
+            self.img_resized = np.zeros((self.height-100, self.width, 3), np.uint8)
         try:
             self.img_resized
         except:
@@ -83,7 +90,7 @@ class App(QWidget):  # main window
         button_prev.setToolTip("Previous image")
         button_prev.move(0.30 * W, H - 50)
         button_prev.clicked.connect(self.on_click_prev)
-        self.shortcut_prev = QShortcut(QKeySequence("Ctrl+è"), self)
+        self.shortcut_prev = QShortcut(QKeySequence("Ctrl+Left"), self)
         self.shortcut_prev.activated.connect(self.on_click_prev)
 
         button_auto = QPushButton("AUTO (beta)", self)
@@ -104,7 +111,7 @@ class App(QWidget):  # main window
         button_next.setToolTip("Next image")
         button_next.move(0.63 * W, H - 50)
         button_next.clicked.connect(self.on_click_next)
-        self.shortcut_next = QShortcut(QKeySequence("Ctrl++"), self)
+        self.shortcut_next = QShortcut(QKeySequence("Ctrl+Right"), self)
         self.shortcut_next.activated.connect(self.on_click_next)
 
         button_zoom = QPushButton("ZOOM", self)
@@ -176,16 +183,20 @@ class App(QWidget):  # main window
         # if the save dir isn't empty, load the names of the saved images
         global save_path
         if not os.path.exists(save_path):
-            try:
-                os.mkdir(save_path)
-                save_path = os.path.join(save_path, "results.tsv")
-            except:
-                if not os.path.exists("results"):
-                    os.mkdir("results")
-                if save_path == "":
-                    save_path = "results.tsv"
-                save_path = os.path.join("results", save_path)
-            columns = "name\tshape\tshapeColor\talphanumeric\talphanumericColor\tbounding_box\trotation\n"
+            path, file = os.path.split(save_path)
+            if not os.path.exists(path):
+                if path != "":
+                    os.mkdir(path)
+                else:
+                    if not os.path.exists("results"):
+                        os.mkdir("results")
+                    path = "results"
+            if file == "":
+                save_path = os.path.join(path, "results.tsv")
+            else:
+                save_path = os.path.join(path, file)
+            # columns = "name\tshape\tshapeColor\talphanumeric\talphanumericColor\tboundingBox\trotation\n"
+            columns = "name\tshape\tshapeColor\tboundingBox\trotation\n"
             with open(save_path, 'w') as save_file:
                 save_file.write(columns)
         else:
@@ -215,6 +226,8 @@ class App(QWidget):  # main window
         print("Previous img:")
         if self.k - 1 == 0:
             print("This is the first image!")
+            self.info_label.setText("First image!")
+            self.info_label.setStyleSheet("background-color: red;")
             return
         else:
             corrupted_check = 1
@@ -242,21 +255,25 @@ class App(QWidget):  # main window
         qimg = QImage(cvRGBImg.data, cvRGBImg.shape[1], cvRGBImg.shape[0], QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(qimg)
         self.label.setPixmap(pixmap)
+        try:
+            self.info_label.setText(pics[str(self.k)])
+            self.info_label.setStyleSheet("background-color: transparent;")
+        except KeyError:
+            pass
 
     def on_click_auto(self):
         print("Automatic mode started")
-        my_autoROI = autoROI(self.image)
-        result = my_autoROI.start()
-        cv2.destroyAllWindows()
-        self.img_cropped = result
-        self.dialog()
+        # my_autoROI = autoROI(self.image)
+        # result = my_autoROI.start()
+        # cv2.destroyAllWindows()
+        # self.img_cropped = result
+        # self.dialog()
 
     def on_click_man(self):
         print("Manual mode started")
         print('WARNING! Object must fill 25%+ of the cropped image!!! ')
         self.regions = cv2.selectROI(self.img_resized)
         cv2.destroyAllWindows()
-        # self.regions = deepcopy(r)
         self.img_cropped = self.Crop(self.regions)
         if self.regions[2] == 0 and self.regions[3] == 0:
             print("self.regions empty")
@@ -267,18 +284,22 @@ class App(QWidget):  # main window
         print("Next img:")
         if self.k + 1 == counter:
             print("No more images!")
+            self.k += 1
             return
         else:
             corrupted_check = 1
             while corrupted_check == 1:
                 if self.k == counter:
                     print("No more images !")
+                    self.info_label.setText("No more images!")
+                    self.info_label.setStyleSheet("background-color: red;")
                     break
                 else:
                     self.k += 1
                     try:
                         self.image = cv2.imread(directoryPath + '/' + pics[str(self.k)])  # 'id: ' +
                         self.img_resized = resize(self.image, width=self.width)  # adds white space for buttons and text
+
                         corrupted_check = 0
                     except:
                         print('skipping img %d: not an image or not-readable image' % self.k)
@@ -293,15 +314,20 @@ class App(QWidget):  # main window
         qimg = QImage(cvRGBImg.data, cvRGBImg.shape[1], cvRGBImg.shape[0], QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(qimg)
         self.label.setPixmap(pixmap)
+        try:
+            self.info_label.setText(pics[str(self.k)])
+            self.info_label.setStyleSheet("background-color: transparent;")
+        except KeyError:
+            pass
 
     def on_click_zoom(self):
-        # self.regions = cv2.selectROI(self.img_resized)
-        self.regions = cv2.selectROI(self.image)
+        temp_resized = resize(self.image, width=self.width)
+        self.zoom = cv2.selectROI(temp_resized)
         cv2.destroyAllWindows()
-        if self.regions[2] == 0 and self.regions[3] == 0:
+        if self.zoom[2] == 0 and self.zoom[3] == 0:
             print("zoom regions empty")
             return
-        self.img_cropped = self.Crop(self.regions, img=self.image)
+        self.img_cropped = self.Crop(self.zoom, img=temp_resized)
         self.img_resized = resize(self.img_cropped, width=self.width)
         cvRGBImg = cv2.cvtColor(self.img_resized, cv2.COLOR_BGR2RGB)
         qimg = QImage(cvRGBImg.data, cvRGBImg.shape[1], cvRGBImg.shape[0], QImage.Format_RGB888)
@@ -486,7 +512,7 @@ class DialogApp(QWidget):  # Dialog window with cropped image
         self.update()
 
         self.rotation = rotation
-        print('rotation:', self.rotation)
+        # print('rotation:', self.rotation)
 
     def on_click_rotate(self):
         self.textbox_rotation.setValue((self.rotation+90) % 360)
@@ -531,16 +557,31 @@ class DialogApp(QWidget):  # Dialog window with cropped image
             if reply == QMessageBox.No:
                 return
 
-        # p : x = self.img_resized.shape : self.image.shape --> x = p*self.image.shape/self.img_resized.shape
+        temp_resized = resize(ex.image, width=ex.width)
+
+        # resized zoom to original zoom
+        # ? : ex.zoom[2] = ex.regions[0] : temp_resized.shape[1]
+        x = ex.zoom[2] * ex.regions[0] / ex.img_resized.shape[1]
+        y = ex.zoom[3] * ex.regions[1] / ex.img_resized.shape[0]
+
+        # ? : ex.regions[2] = ex.zoom[2] : temp_resized.shape[1]
+        w = ex.zoom[2] * ex.regions[2] / ex.img_resized.shape[1]
+        h = ex.zoom[3] * ex.regions[3] / ex.img_resized.shape[0]
+
+        # resized image to original image
+        # ? : (ex.zoom[0] + x) = ex.image.shape[0] : temp_resized.shape[0]
+        # ? : w = ex.image.shape[0] : temp_resized.shape[0]
         regions = [
-            ex.regions[0] * ex.image.shape[0] / ex.img_resized.shape[0],
-            ex.regions[1] * ex.image.shape[1] / ex.img_resized.shape[1],
-            ex.regions[2] * ex.image.shape[0] / ex.img_resized.shape[0],
-            ex.regions[3] * ex.image.shape[1] / ex.img_resized.shape[1]
+            (ex.zoom[0] + x) * ex.image.shape[1] / temp_resized.shape[1],
+            (ex.zoom[1] + y) * ex.image.shape[0] / temp_resized.shape[0],
+            w * ex.image.shape[1] / temp_resized.shape[1],
+            h * ex.image.shape[0] / temp_resized.shape[0]
         ]
+        print("shapes:", ex.image.shape, ex.img_resized.shape, temp_resized.shape)
+        print("regions:\n", ex.zoom, "\n", ex.regions, "\n", regions)
 
         # odlc_tsv = f"{pics[str(ex.k)]}\t{chosen_bshape}\t{chosen_bcolor}\t{chosen_letter}\t{chosen_lcolor}\t" \
-        odlc_tsv = f"{pics[str(ex.k)]}\t{chosen_bshape}\t{chosen_bcolor}\t\t\t" \
+        odlc_tsv = f"{pics[str(ex.k)]}\t{chosen_bshape}\t{chosen_bcolor}\t" \
                    f"[{regions[0]},{regions[1]},{regions[0]+regions[2]},{regions[1]+regions[3]}]\t{self.rotation}\n"
 
         global submitcount
@@ -613,10 +654,10 @@ if __name__ == '__main__':
     Shortcuts:
     ctrl+M = manual
     ctrl+A = auto
-    ctrl+[ = previous
-    ctrl+] = next
+    ctrl+left = previous
+    ctrl+right = next
     ctrl+S = submit
-    # ctrl+R = rotate
+    ctrl+R = rotate
     ctrl+W = close window\n
     Check README.txt for more\n\n"""
 

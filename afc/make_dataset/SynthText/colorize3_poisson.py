@@ -63,8 +63,10 @@ class FontColor(object):
         color_img = np.asarray(Image.open(os.path.join(colors_dir, color_name)))
         pixels = list(color_img[:, :, :3].reshape(color_img.shape[0] * color_img.shape[1], 3))
         color = random.choice(pixels)
+        color_name = os.path.splitext(color_name)[0].upper()
         print("color:", color_name, color)
-        return color, [0, 0, 0]
+        # return color, [0, 0, 0], color_name
+        return color, color, color_name
 
     def complement(self, rgb_color):
         """
@@ -96,12 +98,12 @@ class Colorize(object):
         self.font_color = FontColor(col_file=osp.join(model_dir, 'models/colors_new.cp'))
 
         # probabilities of different text-effects:
-        self.p_bevel = 0.05  # add bevel effect to text
-        self.p_outline = 0.05  # just keep the outline of the text
-        self.p_drop_shadow = 0.15
-        self.p_border = 0.15
-        self.p_displacement = 0.30  # add background-based bump-mapping
-        self.p_texture = 0.0  # use an image for coloring text
+        self.p_bevel = 0  # 0.05  # add bevel effect to text
+        self.p_outline = 0  # 0.05  # just keep the outline of the text
+        self.p_drop_shadow = 0  # 0.15
+        self.p_border = 0  # 0.15
+        self.p_displacement = 0  # 0.30  # add background-based bump-mapping
+        self.p_texture = 0  # 0.0  # use an image for coloring text
 
     def drop_shadow(self, alpha, theta, shift, size, op=0.80):
         """
@@ -249,8 +251,8 @@ class Colorize(object):
 
             H : minimum height of a character
         """
-        fg_col, bg_col = self.font_color.guided_sample()
-        return Layer(alpha=text_arr, color=fg_col), fg_col, bg_col
+        fg_col, bg_col, col_name = self.font_color.guided_sample()
+        return Layer(alpha=text_arr, color=fg_col), fg_col, bg_col, col_name
 
     def process(self, text_arr, bg_arr, min_h):
         """
@@ -261,11 +263,18 @@ class Colorize(object):
         return text_arr blit onto bg_arr.
         """
         # decide on a color for the text:
-        l_text, fg_col, bg_col = self.color_text(text_arr, min_h, bg_arr)
+        l_text, fg_col, bg_col, col_name = self.color_text(text_arr, min_h, bg_arr)
         bg_col = np.mean(np.mean(bg_arr, axis=0), axis=0)
         l_bg = Layer(alpha=255 * np.ones_like(text_arr, 'uint8'), color=bg_col)
 
-        l_text.alpha = l_text.alpha * np.clip(0.88 + 0.1 * np.random.randn(), 0.85, 0.95)
+        print("l_text alpha 0:", np.unique(l_text.alpha))
+        # l_text.alpha = l_text.alpha * np.clip(0.88 + 0.1 * np.random.randn(), 0.85, 0.95)
+
+        # l_text.alpha[l_text.alpha < 100] = 0  # todo
+        # l_text.alpha[l_text.alpha > 100] = 255  # todo
+        # import datetime  # todo
+        # import scipy.misc  # todo
+        # scipy.misc.toimage(l_text.alpha).save(f"testb{datetime.datetime.now()}.jpg".replace(":", "_"))  # todo
         layers = [l_text]
         blends = []
 
@@ -319,14 +328,16 @@ class Colorize(object):
         l_bg = Layer(alpha=255 * np.ones_like(text_arr, 'uint8'), color=bg_arr)
         l_out = blit_images(l_normal.color, l_bg.color.copy())
 
+        # l_out = None  # todo
         if l_out is None:
             # poisson recontruction produced
             # imperceptible text. In this case,
             # just do a normal blend:
             layers[-1] = l_bg
-            return self.merge_down(layers, blends).color
+            print("normal blend")
+            return self.merge_down(layers, blends).color, col_name
 
-        return l_out
+        return l_out, col_name
 
     def color(self, bg_arr, text_arr, hs, place_order=None, pad=20):
         """
@@ -373,11 +384,11 @@ class Colorize(object):
             w, h = text_patch.shape
             bg = bg_arr[l[0]:l[0] + w, l[1]:l[1] + h, :]
 
-            rdr0 = self.process(text_patch, bg, hs[i])
+            rdr0, col_name = self.process(text_patch, bg, hs[i])
             rendered.append(rdr0)
 
             bg_arr[l[0]:l[0] + w, l[1]:l[1] + h, :] = rdr0  # rendered[-1]
 
-            return bg_arr
+            return bg_arr, col_name
 
-        return bg_arr
+        return bg_arr, None

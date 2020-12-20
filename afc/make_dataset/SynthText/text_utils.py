@@ -258,12 +258,12 @@ class RenderFont(object):
             bbs[i] = move_bb(bbs[i], loc[::-1])
 
             # blit the text onto the canvas
-            # print("random loc:", loc, "h:", h, "w:", w, "text_arrs:", text_arrs[i].shape,
+            # print("start:", start, "loc:", loc, "h:", h, "w:", w, "text_arrs:", text_arrs[i].shape,
             #       "out_arr:", out_arr.shape,
             #       "out_arr[...]:", out_arr[loc[0]:loc[0] + w, loc[1]:loc[1] + h].shape)
             out_arr[loc[0]:loc[0] + w, loc[1]:loc[1] + h] += text_arrs[i]
             out_arr[loc[0]-10:loc[0]+w+10, loc[1]-10:loc[1]+h+10] =\
-                ndimage.rotate(out_arr[loc[0]-10:loc[0]+w+10, loc[1]-10:loc[1]+h+10], rot, reshape=False)
+                ndimage.rotate(out_arr[loc[0]-10:loc[0]+w+10, loc[1]-10:loc[1]+h+10], -rot, reshape=False)
         return out_arr, bbs
 
     def bb_xywh2coords(self, bbs):
