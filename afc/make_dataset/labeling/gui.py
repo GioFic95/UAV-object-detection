@@ -1,9 +1,6 @@
 import argparse
-import json
 import os
-import shutil
 import sys
-import string
 
 import cv2
 import numpy as np
@@ -13,7 +10,6 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QPixmap, QImage, QKeySequence, QFont
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QLineEdit, QComboBox, QShortcut, QMessageBox, \
     QInputDialog, QFileDialog, QSpinBox
-from auto_mode import autoROI
 from imutils import resize
 
 
@@ -57,7 +53,7 @@ class App(QWidget):  # main window
         print('')
         print("Start.")
         print('')
-        QMessageBox.about(self, "Info", help_message)
+        # QMessageBox.about(self, "Info", help_message)
         self.info_label = QLabel(self)
         self.info_label.move(50, self.height - 50)
         self.info_label.setFont(QFont('Arial', 20))
@@ -621,7 +617,7 @@ class DialogSubmitted(QWidget):  # Dialog window with cropped image
         self.update()
 
 
-# python gui.py -dir ./test_img -save results
+# python gui.py -dir ./test_img -save results/results.tsv
 if __name__ == '__main__':
     # arguments
     ap = argparse.ArgumentParser()
@@ -642,24 +638,26 @@ if __name__ == '__main__':
     submitted = set()
     submitcount = 0
 
-    help_message = """Rules:\nObject must fill 25%+ of the cropped image.\n
-    Tips:
-    - If the program crashes for some reason, you can restart it and it automatically detects an existing backup folder
-    and asks if you want to use it for checking already submitted objects;
-    - Also, to save time, if you don't remember if an object has been already submitted, you can manually check in the
-    backup folder;
-    - The backup folder is also useful if something goes wrong: copy it on a USB and give it to judges;
-    - When filling object: the dropdown menù has precedence over the text input;
-    - You can also leave blank fields if you fail detecting some details.\n
+    help_message = """If you want to continue your labeling work in a different moment, the
+    script will resume directly from the next picture with respect to the
+    last one from which you submitted some labels, so, remember to fill
+    the labels for all the shapes in a photo before quitting. 
+    
+    You can use the esc key to quit (undo) from the zoom/regions dialogue
+    and enter to confirm the selection.
+    
+    You can use the tab key to move across fields, to fill them faster,
+    and up/down arrows to increment/decrement the rotation.
+    
     Shortcuts:
     ctrl+M = manual
     ctrl+A = auto
-    ctrl+left = previous
-    ctrl+right = next
+    ctrl+Left = previous
+    ctrl+Right = next
     ctrl+S = submit
     ctrl+R = rotate
     ctrl+W = close window\n
-    Check README.txt for more\n\n"""
+    Check readme.md for more\n\n"""
 
     app = QApplication(sys.argv)
     ex = App()
