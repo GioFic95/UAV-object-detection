@@ -31,7 +31,7 @@ class App(QWidget):  # main window
 
     def __init__(self):
         super().__init__()
-        self.title = 'SFT User Interface - AUVSI SUAS'
+        self.title = 'Labeling GUI'
         self.left = 100
         self.top = 10
         self.width = 1200  # 640
@@ -638,26 +638,19 @@ if __name__ == '__main__':
     submitted = set()
     submitcount = 0
 
-    help_message = """If you want to continue your labeling work in a different moment, the
-    script will resume directly from the next picture with respect to the
-    last one from which you submitted some labels, so, remember to fill
-    the labels for all the shapes in a photo before quitting. 
-    
-    You can use the esc key to quit (undo) from the zoom/regions dialogue
-    and enter to confirm the selection.
-    
-    You can use the tab key to move across fields, to fill them faster,
-    and up/down arrows to increment/decrement the rotation.
-    
-    Shortcuts:
-    ctrl+M = manual
-    ctrl+A = auto
-    ctrl+Left = previous
-    ctrl+Right = next
-    ctrl+S = submit
-    ctrl+R = rotate
-    ctrl+W = close window\n
-    Check readme.md for more\n\n"""
+    help_message = "If you want to continue your labeling work in a different moment, the script will resume directly " \
+                   "from the next picture with respect to the last one from which you submitted some labels, so, " \
+                   "remember to fill the labels for all the shapes in a photo before quitting.\n\nYou can use the esc " \
+                   "key to quit (undo) from the zoom/regions dialogue and enter to confirm the selection.\n\nYou can " \
+                   "use the tab key to move across fields, to fill them faster, and up/down arrows to " \
+                   "increment/decrement the rotation.\n\nShortcuts:\n" \
+                   "ctrl+M = manual\n" \
+                   "ctrl+Left = previous\n" \
+                   "ctrl+Right = next\n" \
+                   "ctrl+S = submit\n" \
+                   "ctrl+R = rotate\n" \
+                   "ctrl+W = close window\n" \
+                   "Check readme.md for more\n\n"
 
     app = QApplication(sys.argv)
     ex = App()
