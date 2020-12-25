@@ -172,3 +172,5 @@ gopro/pics/volo2/*
 /afc/make_dataset/SynthText/data/imgs_out/
 /afc/make_dataset/labeling/test_img/
 /afc/make_dataset/labeling/results/
+/afc/make_dataset/labeling/landscape_img/
+/afc/make_dataset/labeling/split_img/

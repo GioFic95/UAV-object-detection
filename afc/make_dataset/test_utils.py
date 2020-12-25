@@ -2,9 +2,13 @@ import h5py
 import traceback
 import cv2
 import os
+import random
+import shutil
+from zipfile import ZipFile
 import numpy as np
 from PIL import Image
 from imutils import rotate, rotate_bound
+from scipy import ndimage
 
 dataset = ""
 
@@ -221,6 +225,56 @@ def test_test_yield():
         print()
 
 
+def all_landscapes(src_path, dst_path):
+    with os.scandir(src_path) as it:
+        for i, entry in enumerate(it):
+            in_path = os.path.join(src_path, entry.name)
+            out_path = os.path.join(dst_path, entry.name)
+            img = cv2.imread(in_path)
+            if img.shape[0] > img.shape[1]:
+                img = ndimage.rotate(img, -90)
+                print(f"{i}.\timage {entry.name} with shape {img.shape} --> rotated")
+            else:
+                print(f"{i}.\timage {entry.name} with shape {img.shape}")
+            if not cv2.imwrite(out_path, img):
+                print("can't save image")
+                break
+
+
+def split_ds(src_path, dst_path, n=100):
+    images = os.listdir(src_path)
+    random.shuffle(images)
+    num = 0
+    cur_dir = ""
+    for i, img in enumerate(images):
+        if i % n == 0:
+            num += 1
+            cur_dir = os.path.join(dst_path, str(num))
+            try:
+                os.mkdir(cur_dir)
+            except FileExistsError:
+                shutil.rmtree(cur_dir)
+                os.mkdir(cur_dir)
+        src = os.path.join(src_path, img)
+        dst = os.path.join(cur_dir, img)
+        shutil.copy(src, dst)
+        print(f"{i}. image {src} copied into {dst}")
+
+
+def zip_dirs(src_path, dst_path):
+    with os.scandir(src_path) as it1:
+        for i, dir in enumerate(it1):
+            print(f"{i}. zipping dir {dir.name}")
+            dir_path = os.path.join(src_path, dir.name)
+            zip_name = os.path.join(dst_path, f"{dir.name}.zip")
+            with ZipFile(zip_name, 'w') as zipObj:
+                with os.scandir(dir_path) as it2:
+                    for j, file in enumerate(it2):
+                        file_path = os.path.join(dir_path, file.name)
+                        zipObj.write(file_path, file.name)
+                        print(f"{i}.{j}. file {file.name} zipped")
+
+
 if __name__ == '__main__':
     # test_h5()
     # describe("./SynthText/results/SynthText.h5")
@@ -243,4 +297,7 @@ if __name__ == '__main__':
     #         starts=[[(255, 176), (300, 176), (255, 230), (300, 230)]],
     #         rots=[-26])
 
-    test_test_yield()
+    # test_test_yield()
+    # all_landscapes("D:/Pictures/drone/10201113", "D:/Pictures/drone/uav_photos")
+    # split_ds("D:/Pictures/drone/uav_photos", "D:/Pictures/drone/uav_split")
+    zip_dirs("D:/Pictures/drone/uav_split", "D:/Pictures/drone/uav_zip")
