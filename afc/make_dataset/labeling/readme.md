@@ -92,9 +92,9 @@ script will resume directly from the next picture with respect to the
 last one from which you submitted some labels, so, remember to **fill
 the labels for all the shapes in a photo** before quitting.
 
-**Blurry images still need labeling**, until the shape and color are
-recognizable. Partial shapes (targents on the boudary of the image) can
-be ignored. For empty images (without any target) use the button `empty`.
+**Blurry images** still need labeling, until the shape and color are
+recognizable. **Partial shapes** (targents on the boudary of the image) can
+be ignored. For **empty images** (without any target) use the button `empty`.
 
 You can use the `esc` key to quit (undo) from the zoom/regions dialogue
 and `enter` to confirm the selection.

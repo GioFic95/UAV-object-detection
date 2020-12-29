@@ -136,6 +136,11 @@ class App(QWidget):  # main window
         button_help.move(0.9 * W, H - 100)
         button_help.clicked.connect(self.on_click_help)
 
+        button_empty = QPushButton("empty", self)
+        button_empty.setToolTip("submit empty image")
+        button_empty.move(0.9 * W, H - 50)
+        button_empty.clicked.connect(self.on_click_empty)
+
         self.shortcut_close = QShortcut(QKeySequence("Ctrl+w"), self)
         self.shortcut_close.activated.connect(self.close)
 
@@ -350,6 +355,21 @@ class App(QWidget):  # main window
 
     def on_click_help(self):
         QMessageBox.about(self, "Info", help_message)
+
+    def on_click_empty(self):
+        reply = QMessageBox.question(self, 'Empty Fields',
+                                     f"Are you sure to submit an empty image?",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.No:
+            return
+        odlc_tsv = f"{pics[str(ex.k)]}\t\t\t\t\n"
+
+        global submitcount
+        submitcount += 1
+        print("EMPTY OBJECT SUBMITTED.     number of submitted objects: " + str(submitcount))
+        with open(save_path, 'a') as save_file:
+            save_file.write(odlc_tsv)
+        self.on_click_next()
 
 
 class DialogApp(QWidget):  # Dialog window with cropped image

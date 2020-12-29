@@ -2,5 +2,5 @@ opencv-python==4.4.0.46
 numpy==1.19.0
 pandas==1.0.0
 scipy==1.5.4
-QtPy==1.9.0
+PyQt5==5.15.2
 imutils==0.5.2
