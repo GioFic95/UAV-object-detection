@@ -29,7 +29,7 @@ where I explain how to use this GUI.
 instead of pip and virtualenv)
 
 1. install Python from [here](https://www.python.org/downloads/)
-  (tested on [Python 3.6](https://www.python.org/downloads/release/python-3612/));
+  (tested on [Python 3.6](https://www.python.org/downloads/release/python-3612/), [install Python 3.6](https://www.pytorials.com/python-download-install-windows/), [install Python 3.8](https://www.python.org/downloads/release/python-387/));
 2. install pip and virtualenv:
    ```
    python3 -m pip install --user --upgrade pip
