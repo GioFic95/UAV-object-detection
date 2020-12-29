@@ -35,36 +35,42 @@ instead of pip and virtualenv)
    python3 -m pip install --user --upgrade pip
    python3 -m pip install --user virtualenv
    ```
-3. create and activate a virtual environment:
+3. create a virtual environment called `labeling`:
    ```
    python3 -m venv labeling
+   ```
+4. activate the virtual environment:
+   ```
    .\labeling\Scripts\activate    # on Windows or
    source labeling/bin/activate   # on macOS/Linux
    ```
-4. install the requirements:
+5. install the requirements:
    ```
    pip install -r requirements.txt
    ```
-5. copy the script `gui.py` and the folder with the input images
+6. copy the script `gui.py` and the folder with the input images
    (`in_imgs`) into the `labeling` directory, which must contain:
    ```
    - environment stuff
    - in_imgs
    - gui.py
    ```
-6. execute the script:
+7. execute the script:
    ```
    cd labeling
    python gui.py -dir ./in_imgs -save results/results.tsv
    ```
-7. submit all the shapes in the images you work on;
-8. leave the virtual environment:
+8. submit all the shapes in the images you work on;
+9. leave the virtual environment:
    ```
    deactivate
    ```
 
 ---
 ### Notes
+
+Once you installed everything, if you want to resume your work, it is
+sufficient to repeat the steps 4, 7, 8, 9.
 
 If you want to continue your labeling work in a different moment, the
 script will resume directly from the next picture with respect to the
