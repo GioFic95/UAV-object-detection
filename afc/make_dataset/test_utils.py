@@ -241,7 +241,7 @@ def all_landscapes(src_path, dst_path):
                 break
 
 
-def split_ds(src_path, dst_path, n=100):
+def split_ds_eq(src_path, dst_path, n=100):
     images = os.listdir(src_path)
     random.shuffle(images)
     num = 0
@@ -259,6 +259,30 @@ def split_ds(src_path, dst_path, n=100):
         dst = os.path.join(cur_dir, img)
         shutil.copy(src, dst)
         print(f"{i}. image {src} copied into {dst}")
+
+
+def split_ds_prop(src_path, dst_path, groups):
+    images = os.listdir(src_path)
+    random.shuffle(images)
+    tot = sum(list(groups.values()))
+    n = round(len(images)/tot)
+    group_imgs = {k: v * n for k, v in groups.items()}
+    i = 0
+
+    for g_name, g_val in group_imgs.items():
+        cur_dir = os.path.join(dst_path, g_name)
+        try:
+            os.mkdir(cur_dir)
+        except FileExistsError:
+            shutil.rmtree(cur_dir)
+            os.mkdir(cur_dir)
+        for j, img in enumerate(images[i:i+g_val]):
+            src = os.path.join(src_path, img)
+            dst = os.path.join(cur_dir, img)
+            shutil.copy(src, dst)
+            print(f"{j+1}. image {src} copied into {dst}")
+        i += min(g_val, len(images)-i)
+        print(f"group {g_name} done, i = {i}")
 
 
 def zip_dirs(src_path, dst_path):
@@ -299,5 +323,14 @@ if __name__ == '__main__':
 
     # test_test_yield()
     # all_landscapes("D:/Pictures/drone/10201113", "D:/Pictures/drone/uav_photos")
-    # split_ds("D:/Pictures/drone/uav_photos", "D:/Pictures/drone/uav_split")
-    zip_dirs("D:/Pictures/drone/uav_split", "D:/Pictures/drone/uav_zip")
+    # split_ds_eq("D:/Pictures/drone/uav_photos", "D:/Pictures/drone/uav_split")
+    groups = {
+        "SITL": 10,
+        "HITL": 3,
+        "Hardware": 8,
+        "Rover": 5,
+        "CAD": 6,
+        "CV": 4
+    }
+    split_ds_prop("D:/Pictures/drone/uav_photos", "D:/Pictures/drone/uav_split_1", groups)
+    zip_dirs("D:/Pictures/drone/uav_split_1", "D:/Pictures/drone/uav_zip_1")
