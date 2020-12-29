@@ -29,15 +29,36 @@ where I explain how to use this GUI.
 instead of pip and virtualenv)
 
 1. install Python from [here](https://www.python.org/downloads/)
-  (tested on [Python 3.6](https://www.python.org/downloads/release/python-3612/), [install Python 3.6](https://www.pytorials.com/python-download-install-windows/), [install Python 3.8](https://www.python.org/downloads/release/python-387/));
+   (tested on [Python 3.6](https://www.python.org/downloads/release/python-3612/),
+   [install Python 3.6](https://www.pytorials.com/python-download-install-windows/),
+   [install Python 3.8](https://www.python.org/downloads/release/python-387/))
+   ![Python installer](https://www.pytorials.com/wp-content/uploads/2017/12/python3.6_installation_2.png)\
+   **in the installer, make sure "Add Python 3.x to PATH" option is checked;**
+2. open your prompt/cmd (on Windows) or terminal/bash (on macOS or Linux) and go to
+   your working directory (let's call it `w_dir`), where there are the script `gui.py`,
+   the file `requirements.txt` and the folder with the input images (let's call it `in_imgs`):
+   ```
+   cd w_dir
+   ```
 2. install pip and virtualenv:
    ```
-   python3 -m pip install --user --upgrade pip
-   python3 -m pip install --user virtualenv
+   python3 -m pip install --user --upgrade pip   # or
+   python -m pip install --user --upgrade pip
+   
+   python3 -m pip install --user virtualenv      # or
+   python -m pip install --user virtualenv
    ```
 3. create a virtual environment called `labeling`:
    ```
-   python3 -m venv labeling
+   python3 -m venv labeling   # or
+   python -m venv labeling
+   ```
+   the content of your working directory will something be:
+   ```
+   - in_imgs
+   - labeling
+   - gui.py
+   - requirements.txt
    ```
 4. activate the virtual environment:
    ```
@@ -48,18 +69,12 @@ instead of pip and virtualenv)
    ```
    pip install -r requirements.txt
    ```
-6. copy the script `gui.py` and the folder with the input images
-   (`in_imgs`) into the `labeling` directory, which must contain:
-   ```
-   - environment stuff
-   - in_imgs
-   - gui.py
-   ```
 7. execute the script:
    ```
-   cd labeling
    python gui.py -dir ./in_imgs -save results/results.tsv
    ```
+   recall that `in_imgs` must be the name of the directory which
+   contains the input imagges;
 8. submit all the shapes in the images you work on;
 9. leave the virtual environment:
    ```
@@ -75,7 +90,11 @@ sufficient to repeat the steps 4, 7, 8, 9.
 If you want to continue your labeling work in a different moment, the
 script will resume directly from the next picture with respect to the
 last one from which you submitted some labels, so, remember to **fill
-the labels for all the shapes in a photo** before quitting. 
+the labels for all the shapes in a photo** before quitting.
+
+**Blurry images still need labeling**, until the shape and color are
+recognizable. Partial shapes (targents on the boudary of the image) can
+be ignored. For empty images (without any target) use the button `empty`.
 
 You can use the `esc` key to quit (undo) from the zoom/regions dialogue
 and `enter` to confirm the selection.
