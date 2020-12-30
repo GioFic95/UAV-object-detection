@@ -68,7 +68,7 @@ class App(QWidget):  # main window
         try:
             self.img_resized
         except:
-            self.img_resized = np.zeros((640, 640, 3), np.uint8)
+            self.img_resized = np.zeros((self.height-100, self.width, 3), np.uint8)
         imglst.append(self.img_resized)
         cvRGBImg = cv2.cvtColor(self.img_resized, cv2.COLOR_BGR2RGB)
         qimg = QImage(cvRGBImg.data, cvRGBImg.shape[1], cvRGBImg.shape[0], QImage.Format_RGB888)
@@ -202,7 +202,6 @@ class App(QWidget):  # main window
                 save_file.write(columns)
         else:
             df = pd.read_csv(save_path, sep='\t')
-            print(df.dtypes)
             names = df["name"].values
             global submitted
             submitted.update([name.split("_")[0] for name in names])
@@ -219,7 +218,7 @@ class App(QWidget):  # main window
             img = self.img_resized
         img_crop = img[int(regions[1]):int(regions[1] + regions[3]),
                        int(regions[0]):int(regions[0] + regions[2])]
-        print("crop:", regions)
+        # print("crop:", regions)
         return img_crop
 
     @pyqtSlot()
@@ -271,8 +270,6 @@ class App(QWidget):  # main window
         # self.dialog()
 
     def on_click_man(self):
-        print("Manual mode started")
-        print('WARNING! Object must fill 25%+ of the cropped image!!! ')
         self.regions = cv2.selectROI(self.img_resized)
         cv2.destroyAllWindows()
         self.img_cropped = self.Crop(self.regions)

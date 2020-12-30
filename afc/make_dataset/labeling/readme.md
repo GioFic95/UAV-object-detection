@@ -33,7 +33,7 @@ instead of pip and virtualenv)
    which can be installed following [this tutorial](https://www.pytorials.com/python-download-install-windows/)
    with links to 32 and 64 bit installers, while [here](https://www.python.org/downloads/release/python-387/)
    there is a more recent release (Python 3.8)
-   ![Python installer](https://www.pytorials.com/wp-content/uploads/2017/12/python3.6_installation_2.png)\
+   ![Python installer](https://www.pytorials.com/wp-content/uploads/2017/12/python3.6_installation_2.png) \
    **in the installer, make sure "Add Python 3.x to PATH" option is checked;**
 2. open your prompt/cmd (on Windows) or terminal/bash (on macOS or Linux) and go to
    your working directory (let's call it `w_dir`), where there are the script `gui.py`,
@@ -92,6 +92,9 @@ instead of pip and virtualenv)
 Once you installed everything, if you want to resume your work, it is
 sufficient to repeat the steps 4, 7, 8, 9.
 
+If you can't see the buttons, which should be at the bottom of the image,
+you can try to enlarge the window.
+
 If you want to continue your labeling work in a different moment, the
 script will resume directly from the next picture with respect to the
 last one from which you submitted some labels, so, remember to **fill
@@ -111,6 +114,15 @@ and `enter` to confirm the selection.
 
 You can use the `tab` key to move across fields, to fill them faster,
 and `up/down arrows` to increment/decrement the rotation.
+
+If the *ROI selector window* doesn't close or keeps reopening, you can
+just close the prompt/terminal when you have finished.
+
+Rotated shapes should look like the ones in the following picture:
+the circle can have any rotation, the square can be aligned to any one
+of its sides, and so on.
+![Shapes](Shapes.png) \
+(click to see better)
 
 ---
 ### Shortcuts:
