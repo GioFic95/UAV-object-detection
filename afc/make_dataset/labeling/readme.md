@@ -69,6 +69,10 @@ instead of pip and virtualenv)
    ```
    pip install -r requirements.txt
    ```
+   on Windows, it may be necessary to install the Microsoft C++ Build Tools from
+   [here](https://visualstudio.microsoft.com/it/visual-cpp-build-tools/), to make
+   the requirements installation work, so pay attention to what is written in the
+   prompt/cmd;
 7. execute the script:
    ```
    python gui.py -dir ./in_imgs -save results/results.tsv
