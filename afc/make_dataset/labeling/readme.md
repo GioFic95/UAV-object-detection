@@ -28,10 +28,11 @@ where I explain how to use this GUI.
 (you can also use [Anaconda](https://www.anaconda.com/products/individual#Downloads)
 instead of pip and virtualenv)
 
-1. install Python from [here](https://www.python.org/downloads/)
-   (tested on [Python 3.6](https://www.python.org/downloads/release/python-3612/),
-   [install Python 3.6](https://www.pytorials.com/python-download-install-windows/),
-   [install Python 3.8](https://www.python.org/downloads/release/python-387/))
+1. install Python: you can find the last release [here](https://www.python.org/downloads/),
+   but the program was tested on [Python 3.6](https://www.python.org/downloads/release/python-3612/),
+   which can be installed following [this tutorial](https://www.pytorials.com/python-download-install-windows/)
+   with links to 32 and 64 bit installers, while [here](https://www.python.org/downloads/release/python-387/)
+   there is a more recent release (Python 3.8)
    ![Python installer](https://www.pytorials.com/wp-content/uploads/2017/12/python3.6_installation_2.png)\
    **in the installer, make sure "Add Python 3.x to PATH" option is checked;**
 2. open your prompt/cmd (on Windows) or terminal/bash (on macOS or Linux) and go to
