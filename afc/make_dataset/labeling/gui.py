@@ -572,26 +572,38 @@ class DialogApp(QWidget):  # Dialog window with cropped image
 
         temp_resized = resize(ex.image, width=ex.width)
 
-        # resized zoom to original zoom
-        # ? : ex.zoom[2] = ex.regions[0] : temp_resized.shape[1]
-        x = ex.zoom[2] * ex.regions[0] / ex.img_resized.shape[1]
-        y = ex.zoom[3] * ex.regions[1] / ex.img_resized.shape[0]
+        try:
+            # resized zoom to original zoom
+            # ? : ex.zoom[2] = ex.regions[0] : temp_resized.shape[1]
+            x = ex.zoom[2] * ex.regions[0] / ex.img_resized.shape[1]
+            y = ex.zoom[3] * ex.regions[1] / ex.img_resized.shape[0]
 
-        # ? : ex.regions[2] = ex.zoom[2] : temp_resized.shape[1]
-        w = ex.zoom[2] * ex.regions[2] / ex.img_resized.shape[1]
-        h = ex.zoom[3] * ex.regions[3] / ex.img_resized.shape[0]
+            # ? : ex.regions[2] = ex.zoom[2] : temp_resized.shape[1]
+            w = ex.zoom[2] * ex.regions[2] / ex.img_resized.shape[1]
+            h = ex.zoom[3] * ex.regions[3] / ex.img_resized.shape[0]
 
-        # resized image to original image
-        # ? : (ex.zoom[0] + x) = ex.image.shape[0] : temp_resized.shape[0]
-        # ? : w = ex.image.shape[0] : temp_resized.shape[0]
-        regions = [
-            (ex.zoom[0] + x) * ex.image.shape[1] / temp_resized.shape[1],
-            (ex.zoom[1] + y) * ex.image.shape[0] / temp_resized.shape[0],
-            w * ex.image.shape[1] / temp_resized.shape[1],
-            h * ex.image.shape[0] / temp_resized.shape[0]
-        ]
-        print("shapes:", ex.image.shape, ex.img_resized.shape, temp_resized.shape)
-        print("regions:\n", ex.zoom, "\n", ex.regions, "\n", regions)
+            # resized image to original image
+            # ? : (ex.zoom[0] + x) = ex.image.shape[0] : temp_resized.shape[0]
+            # ? : w = ex.image.shape[0] : temp_resized.shape[0]
+            regions = [
+                (ex.zoom[0] + x) * ex.image.shape[1] / temp_resized.shape[1],
+                (ex.zoom[1] + y) * ex.image.shape[0] / temp_resized.shape[0],
+                w * ex.image.shape[1] / temp_resized.shape[1],
+                h * ex.image.shape[0] / temp_resized.shape[0]
+            ]
+            # print("regions:\n", ex.zoom, "\n", ex.regions, "\n", regions)
+        except AttributeError:
+            # resized image to original image
+            # ? : ex.regions[0] = ex.image.shape[1] : temp_resized.shape[1]
+            regions = [
+                ex.regions[0] * ex.image.shape[1] / temp_resized.shape[1],
+                ex.regions[1] * ex.image.shape[0] / temp_resized.shape[0],
+                ex.regions[2] * ex.image.shape[1] / temp_resized.shape[1],
+                ex.regions[3] * ex.image.shape[0] / temp_resized.shape[0]
+            ]
+            # print("regions:\n", ex.regions, "\n", regions)
+
+        # print("shapes:", ex.image.shape, ex.img_resized.shape, temp_resized.shape)
 
         # odlc_tsv = f"{pics[str(ex.k)]}\t{chosen_bshape}\t{chosen_bcolor}\t{chosen_letter}\t{chosen_lcolor}\t" \
         odlc_tsv = f"{pics[str(ex.k)]}\t{chosen_bshape}\t{chosen_bcolor}\t" \
