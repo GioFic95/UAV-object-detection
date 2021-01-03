@@ -107,7 +107,8 @@ becomes ruined after rotation (e.g., some vertices of the shape are cut off).
 
 **Blurry images** still need labeling, until the shape and color are
 recognizable. **Partial shapes** (targets on the boudary of the image) can
-be ignored. For **empty images** (without any target) use the button `empty`.
+be ignored; if a picture contains only partial shapes, it can be considered
+empty. For **empty images** (without any target) use the button `empty`.
 
 You can use the `esc` key to quit (undo) from the zoom/regions dialogue
 and `enter` to confirm the selection.
