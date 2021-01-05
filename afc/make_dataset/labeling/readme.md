@@ -3,6 +3,7 @@
 Based on a work by the Sapienza Flight Team in 2019.
 
 ---
+
 ### Description
 
 Our dataset is composed of photos taken from a terrace about 30
@@ -24,6 +25,7 @@ and select shape name and color from a drop-down list.
 where I explain how to use this GUI.
 
 ---
+
 ### Installation and usage:
 (you can also use [Anaconda](https://www.anaconda.com/products/individual#Downloads)
 instead of pip and virtualenv)
@@ -36,20 +38,19 @@ instead of pip and virtualenv)
    ![Python installer](https://www.pytorials.com/wp-content/uploads/2017/12/python3.6_installation_2.png) \
    **in the installer, make sure "Add Python 3.x to PATH" option is checked;**
 2. open your prompt/cmd (on Windows) or terminal/bash (on macOS or Linux) and go to
-   your working directory (let's call it `w_dir`), where there are the script `gui.py`,
-   the file `requirements.txt` and the folder with the input images (let's call it `in_imgs`):
+   your working directory, where there are the script `gui.py`,
+   the file `requirements.txt` and the folder with the input images (let's call it `in_imgs`),
+   let `w_dir` be its path:
    ```
    cd w_dir
    ```
-2. install pip and virtualenv:
+   if the path contains any space, it has to be enclosed in quotes;
+3. install pip:
    ```
    python3 -m pip install --user --upgrade pip   # or
    python -m pip install --user --upgrade pip
-   
-   python3 -m pip install --user virtualenv      # or
-   python -m pip install --user virtualenv
    ```
-3. create a virtual environment called `labeling`:
+4. create a virtual environment called `labeling`:
    ```
    python3 -m venv labeling   # or
    python -m venv labeling
@@ -61,12 +62,12 @@ instead of pip and virtualenv)
    - gui.py
    - requirements.txt
    ```
-4. activate the virtual environment:
+5. activate the virtual environment:
    ```
    .\labeling\Scripts\activate    # on Windows or
    source labeling/bin/activate   # on macOS/Linux
    ```
-5. install the requirements:
+6. install the requirements:
    ```
    pip install -r requirements.txt
    ```
@@ -87,13 +88,11 @@ instead of pip and virtualenv)
    ```
 
 ---
+
 ### Notes
 
 Once you installed everything, if you want to resume your work, it is
-sufficient to repeat the steps 4, 7, 8, 9.
-
-If you can't see the buttons, which should be at the bottom of the image,
-you can try to enlarge the window.
+sufficient to repeat the steps 2, 5, 7, 8, 9.
 
 If you want to continue your labeling work in a different moment, the
 script will resume directly from the next picture with respect to the
@@ -126,6 +125,7 @@ of its sides, and so on.
 (click to see better)
 
 ---
+
 ### Shortcuts:
 - ctrl+M: select shape regions
 - ctrl+Left: previous image
@@ -134,3 +134,50 @@ of its sides, and so on.
 - ctrl+R: rotate 90 degrees
 - ctrl+W: close window
 - esc: close zoom/regions dialogue
+
+---
+
+### Troubleshooting:
+
+-  If you get some errors while installing the requirements (step 6), my
+   advice is to try with Python 3.6, instead of using the last version
+   (run `deactivate`, delete the environment directory `labeling` and restart from step 1).
+   You can find some link to installers and tutorials in step 1.
+   
+   If you already use Python, you can install another version _without_
+   adding it to the PATH, and use it when you create your environment.
+   Instead of step 4, run:
+   ```
+   python3 -m pip install --user virtualenv      # or
+   python -m pip install --user virtualenv
+   
+   virtualenv -p <path to python3.6> labeling
+   ```
+   Recall that if the path contains any space, it has to be enclosed in quotes.
+   Then continue from step 5. If the command `virtualenv` isn't recognizet,
+   you may have to close and reopen your cmd/terminal (in this case, remember
+   to repeat step 2).
+
+-  If you're on a Mac, and the gui crashes when launched, if you read
+   "You might be loading two sets of Qt binaries into the same process"
+   in the terminal, try the following:
+   ```
+   pip uninstall opencv-python
+   pip install opencv-python-headless
+   ```
+   Then just save and run the script again (step 7).
+
+-  If you can't see the buttons, which should be at the bottom of the image,
+   you can try to enlarge the window. If it doesn't work, you can open the
+   script `gui.py` with a text editor (e.g. Notepad, Gedit, TextEdit...) and
+   replace the rows n. 37, 38
+   ```
+   self.width = 1200  # 640
+   self.height = 900  # 480
+   ```
+   with the following:
+   ```
+   self.width = 1000
+   self.height = 750
+   ```
+   Then just save and run the script again (step 7).
