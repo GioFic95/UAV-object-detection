@@ -268,13 +268,8 @@ class Colorize(object):
         l_bg = Layer(alpha=255 * np.ones_like(text_arr, 'uint8'), color=bg_col)
 
         print("l_text alpha 0:", np.unique(l_text.alpha))
-        # l_text.alpha = l_text.alpha * np.clip(0.88 + 0.1 * np.random.randn(), 0.85, 0.95)
+        l_text.alpha = l_text.alpha * np.clip(0.88 + 0.1 * np.random.randn(), 0.85, 0.95)
 
-        # l_text.alpha[l_text.alpha < 100] = 0  # todo
-        # l_text.alpha[l_text.alpha > 100] = 255  # todo
-        # import datetime  # todo
-        # import scipy.misc  # todo
-        # scipy.misc.toimage(l_text.alpha).save(f"testb{datetime.datetime.now()}.jpg".replace(":", "_"))  # todo
         layers = [l_text]
         blends = []
 
@@ -328,7 +323,6 @@ class Colorize(object):
         l_bg = Layer(alpha=255 * np.ones_like(text_arr, 'uint8'), color=bg_arr)
         l_out = blit_images(l_normal.color, l_bg.color.copy())
 
-        # l_out = None  # todo
         if l_out is None:
             # poisson recontruction produced
             # imperceptible text. In this case,

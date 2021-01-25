@@ -24,6 +24,7 @@ import pandas as pd
 import tarfile
 import wget
 from PIL import Image
+import cv2
 
 from common import *
 from synthgen import *
@@ -61,6 +62,7 @@ def get_data():
         name = g[0]
         path = os.path.join(DATA_PATH, IMAGES_IN, name)
         image = cv2.imread(path)
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
         row = g[1]
         starts = [eval(x) for x in row["boundingBox"]]
@@ -95,8 +97,7 @@ def add_res_to_db(df, d, res):
 
         path = os.path.join(DATA_PATH, IMAGES_OUT, name)
         obj = res[i]['img']
-        # cv2.imwrite(path, cv2.cvtColor(obj[:].T[:, :, 1], cv2.COLOR_BGR2RGB))
-        cv2.imwrite(path, obj)
+        cv2.imwrite(path, cv2.cvtColor(obj, cv2.COLOR_BGR2RGB))
 
     return df
 

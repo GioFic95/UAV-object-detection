@@ -229,5 +229,5 @@ class RendererV3(object):
                 if viz:
                     viz_textbb(1, img, [idict['wordBB']], alpha=1.0)
                     if i < ninstance - 1:
-                        raw_input(colorize(Color.BLUE, 'continue?', True))
+                        input(colorize(Color.BLUE, 'continue?', True))
         return res
