@@ -9,9 +9,9 @@ from __future__ import division
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import text_utils as tu
-from colorize3_poisson import Colorize
-from common import *
+from . import text_utils as tu
+from .colorize3_poisson import Colorize
+from .common import *
 import traceback, itertools
 
 

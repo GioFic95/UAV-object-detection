@@ -6,7 +6,7 @@ import scipy.ndimage.interpolation as sii
 import os
 import os.path as osp
 from PIL import Image
-from poisson_reconstruct import blit_images
+from .poisson_reconstruct import blit_images
 import pickle
 
 
@@ -57,7 +57,7 @@ class FontColor(object):
         self.colorsLAB = np.squeeze(cv.cvtColor(self.colorsLAB[None, :, :], cv.COLOR_RGB2Lab))
 
     def guided_sample(self):
-        colors_dir = "../colors"
+        colors_dir = "./colors"
         colors = os.listdir(colors_dir)
         color_name = random.choice(colors)
         color_img = np.asarray(Image.open(os.path.join(colors_dir, color_name)))

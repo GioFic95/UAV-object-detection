@@ -11,7 +11,7 @@ import os.path as osp
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py
-from common import *
+from .common import *
 
 
 def viz_textbb(text_im, charBB_list, wordBB, alpha=1.0):

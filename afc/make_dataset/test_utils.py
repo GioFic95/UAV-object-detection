@@ -1,3 +1,5 @@
+import pandas as pd
+import glob
 import h5py
 import traceback
 import cv2
@@ -9,6 +11,7 @@ import numpy as np
 from PIL import Image
 from imutils import rotate, rotate_bound
 from scipy import ndimage
+from SynthText.gen import gen_synth_ds
 
 dataset = ""
 
@@ -299,6 +302,62 @@ def zip_dirs(src_path, dst_path):
                         print(f"{i}.{j}. file {file.name} zipped")
 
 
+def check_labeling_res(res_path, num_imgs):
+    res_tsvs = glob.glob(res_path + "/*/*_cv.tsv")
+    print(res_tsvs)
+    imgs = set()
+    err = []
+    for tsv in res_tsvs:
+        df = pd.read_csv(tsv, sep='\t')
+        imgs.update(df['name'].values)
+        with open(tsv, 'r') as file:
+            data = file.read().replace('\n', '')
+            if "0.0,0.0" in data:
+                err += [f"check '0.0,0.0' error in file {tsv}"]
+    print(f"eq. length: {len(imgs) == num_imgs}, num names: {len(imgs)}, num imgs: {num_imgs}")
+    for e in err:
+        print(e)
+    return len(err) != 0
+
+
+def gen_synth_dss():
+    data_path = "SynthText/data"
+    res_path = os.path.join(data_path, "results")
+    images_in = "uav_photos"
+    images_out = "imgs_out"
+    log = "results/log.txt"
+    size = (450, 600)
+    instance_per_image = 3
+    secs_per_img = None
+
+    check_labeling_res(res_path, len(os.listdir(os.path.join(data_path, images_in))))
+    res_tsvs = glob.glob(res_path + "/*/*_cv.tsv")
+    print("num tsv files:", len(res_tsvs))
+    for i, tsv in enumerate(res_tsvs):
+        in_file = tsv[15:]
+        out_file = f"results/final/results_{i}.tsv"
+        print(in_file, out_file)
+        gen_synth_ds(data_path, in_file, out_file, images_in, images_out, size, instance_per_image, secs_per_img, log)
+
+
+def join_dss():
+    in_path = "SynthText/data/results/final"
+    out_path = "SynthText/data/results/final_results.tsv"
+    dfs = []
+    nrows = 0
+    tsvs = glob.glob(in_path + "/*.tsv")
+    print("len tsvs:", len(tsvs))
+    for tsv in tsvs:
+        df = pd.read_csv(tsv, sep='\t')
+        dfs += [df]
+        nrows += len(df)
+    concat = pd.concat(dfs)
+    print(f"nrows: {nrows} VS concat: {len(concat)}")
+    if nrows != len(concat):
+        exit(-1)
+    concat.to_csv(out_path, index=False, sep='\t')
+
+
 if __name__ == '__main__':
     # test_h5()
     # describe("./SynthText/results/SynthText.h5")
@@ -324,13 +383,18 @@ if __name__ == '__main__':
     # test_test_yield()
     # all_landscapes("D:/Pictures/drone/10201113", "D:/Pictures/drone/uav_photos")
     # split_ds_eq("D:/Pictures/drone/uav_photos", "D:/Pictures/drone/uav_split")
-    groups = {
-        "SITL": 10,
-        "HITL": 3,
-        "Hardware": 8,
-        "Rover": 5,
-        "CAD": 6,
-        "CV": 4
-    }
-    split_ds_prop("D:/Pictures/drone/uav_photos", "D:/Pictures/drone/uav_split_1", groups)
-    zip_dirs("D:/Pictures/drone/uav_split_1", "D:/Pictures/drone/uav_zip_1")
+    # groups = {
+    #     "SITL": 10,
+    #     "HITL": 3,
+    #     "Hardware": 8,
+    #     "Rover": 5,
+    #     "CAD": 6,
+    #     "CV": 4
+    # }
+    # split_ds_prop("D:/Pictures/drone/uav_photos", "D:/Pictures/drone/uav_split_1", groups)
+    # zip_dirs("D:/Pictures/drone/uav_split_1", "D:/Pictures/drone/uav_zip_1")
+
+    if check_labeling_res("SynthText/data/results", 70):
+        exit(-1)
+    gen_synth_dss()
+    join_dss()

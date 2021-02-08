@@ -8,7 +8,7 @@ import cv2 as cv
 import pygame, pygame.locals
 from pygame import freetype
 import math
-from common import *
+from .common import *
 import pickle
 
 
