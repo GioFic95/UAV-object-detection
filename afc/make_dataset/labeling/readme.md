@@ -62,6 +62,7 @@ instead of pip and virtualenv)
    - gui.py
    - requirements.txt
    ```
+   ![w_dir](w_dir.PNG)
 5. activate the virtual environment:
    ```
    .\labeling\Scripts\activate    # on Windows or
