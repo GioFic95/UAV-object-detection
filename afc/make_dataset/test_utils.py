@@ -6,11 +6,13 @@ import cv2
 import os
 import random
 import shutil
+from datetime import datetime
 from zipfile import ZipFile
 import numpy as np
 from PIL import Image
 from imutils import rotate, rotate_bound
 from scipy import ndimage
+
 from SynthText.gen import gen_synth_ds
 
 dataset = ""
@@ -148,7 +150,7 @@ def new_join(bg_path, seg_db_path, depth_db_path, out_path, depth='all_white'):
             depth1 = np.zeros_like(depth_db[depth_name])
             depth1[start[1]:start[1] + shape[1], start[0]:start[0] + shape[0]] = 255.0
         elif depth == "gradient":
-            depth1 = np.asarray(Image.open(os.path.join(depth_path, f"depth{i+1}.jpg")).convert('L')).T
+            depth1 = np.asarray(Image.open(os.path.join(depth_path, f"depth{i + 1}.jpg")).convert('L')).T
         elif depth == "all_white":
             depth1 = np.full(depth_db[depth_name].shape, 255.0, dtype=np.float)
         else:
@@ -158,7 +160,7 @@ def new_join(bg_path, seg_db_path, depth_db_path, out_path, depth='all_white'):
         # add segments
         seg_name = list(seg_db["mask"].keys())[i]
         seg = np.zeros(depth0.T.shape, dtype=np.int)
-        seg[start[0]:start[0]+shape[0], start[1]:start[1]+shape[1]] = 255
+        seg[start[0]:start[0] + shape[0], start[1]:start[1] + shape[1]] = 255
         out_db['seg'].create_dataset(seg_name, data=seg)
         out_db['seg'][seg_name].attrs['area'] = np.array([0, 1000])
         out_db['seg'][seg_name].attrs['label'] = np.array([0, 255])
@@ -219,7 +221,8 @@ def test_yield():
         shapes = row["shape"].values
         transformed = transform(image=image, bboxes=starts, class_labels=shapes)
 
-        yield {"name": name, "image": transformed["image"], "starts": transformed["bboxes"], "rots": rots, "shapes": shapes}
+        yield {"name": name, "image": transformed["image"], "starts": transformed["bboxes"], "rots": rots,
+               "shapes": shapes}
 
 
 def test_test_yield():
@@ -268,7 +271,7 @@ def split_ds_prop(src_path, dst_path, groups):
     images = os.listdir(src_path)
     random.shuffle(images)
     tot = sum(list(groups.values()))
-    n = round(len(images)/tot)
+    n = round(len(images) / tot)
     group_imgs = {k: v * n for k, v in groups.items()}
     i = 0
 
@@ -279,12 +282,12 @@ def split_ds_prop(src_path, dst_path, groups):
         except FileExistsError:
             shutil.rmtree(cur_dir)
             os.mkdir(cur_dir)
-        for j, img in enumerate(images[i:i+g_val]):
+        for j, img in enumerate(images[i:i + g_val]):
             src = os.path.join(src_path, img)
             dst = os.path.join(cur_dir, img)
             shutil.copy(src, dst)
-            print(f"{j+1}. image {src} copied into {dst}")
-        i += min(g_val, len(images)-i)
+            print(f"{j + 1}. image {src} copied into {dst}")
+        i += min(g_val, len(images) - i)
         print(f"group {g_name} done, i = {i}")
 
 
@@ -303,17 +306,18 @@ def zip_dirs(src_path, dst_path):
 
 
 def check_labeling_res(res_path, num_imgs):
-    res_tsvs = glob.glob(res_path + "/*/*_cv.tsv")
+    res_tsvs = glob.glob(res_path + "/*/*.tsv")
     print(res_tsvs)
     imgs = set()
     err = []
     for tsv in res_tsvs:
-        df = pd.read_csv(tsv, sep='\t')
-        imgs.update(df['name'].values)
-        with open(tsv, 'r') as file:
-            data = file.read().replace('\n', '')
-            if "0.0,0.0" in data:
-                err += [f"check '0.0,0.0' error in file {tsv}"]
+        if "final" not in tsv:
+            df = pd.read_csv(tsv, sep='\t')
+            imgs.update(df['name'].values)
+            with open(tsv, 'r') as file:
+                data = file.read().replace('\n', '')
+                if "0.0,0.0" in data:
+                    err += [f"check '0.0,0.0' error in file {tsv}"]
     print(f"eq. length: {len(imgs) == num_imgs}, num names: {len(imgs)}, num imgs: {num_imgs}")
     for e in err:
         print(e)
@@ -325,13 +329,14 @@ def gen_synth_dss():
     res_path = os.path.join(data_path, "results")
     images_in = "uav_photos"
     images_out = "imgs_out"
-    log = "results/log.txt"
+    now = datetime.now().strftime("%Y_%m_%d__%H_%M_%S")
+    log = f"results/log_{now}.txt"
     size = (450, 600)
     instance_per_image = 3
     secs_per_img = None
 
     check_labeling_res(res_path, len(os.listdir(os.path.join(data_path, images_in))))
-    res_tsvs = glob.glob(res_path + "/*/*_cv.tsv")
+    res_tsvs = [fn for fn in glob.glob(res_path + "/*/*.tsv") if "final" not in fn]
     print("num tsv files:", len(res_tsvs))
     for i, tsv in enumerate(res_tsvs):
         in_file = tsv[15:]
