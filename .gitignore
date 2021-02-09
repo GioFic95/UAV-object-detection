@@ -175,3 +175,15 @@ gopro/pics/volo2/*
 /afc/make_dataset/labeling/landscape_img/
 /afc/make_dataset/labeling/split_img/
 /afc/make_dataset/labeling/zip_img/
+/afc/yolov5/data/*
+/afc/yolov5/weights/*
+/afc/yolov5/wandb/
+/afc/yolov5/runs/
+/afc/chars_rec/models/
+/afc/chars_rec/chars74k-master/saver1.txt
+/afc/chars_rec/chars74k-master/saver2.txt
+/afc/chars_rec/cifar10_tutorial.py
+/afc/chars_rec/tensorboard_with_pytorch.py
+/afc/make_dataset/labeling/labeling.zip
+/afc/make_dataset/SynthText/data/results/
+/afc/make_dataset/SynthText/data/uav_photos/
