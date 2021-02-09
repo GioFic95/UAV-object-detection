@@ -65,12 +65,14 @@ instead of pip and virtualenv)
    ![w_dir](w_dir.PNG)
 5. activate the virtual environment:
    ```
-   .\labeling\Scripts\activate    # on Windows or
+   ./labeling/Scripts/activate    # on Windows or
    source labeling/bin/activate   # on macOS/Linux
    ```
 6. install the requirements:
    ```
-   pip install -r requirements.txt
+   pip install -r requirements.txt             # or
+   python -m pip install -r requirements.txt   # or
+   python3 -m pip install -r requirements.txt
    ```
    on Windows, it may be necessary to install the Microsoft C++ Build Tools from
    [here](https://visualstudio.microsoft.com/it/visual-cpp-build-tools/), to make
