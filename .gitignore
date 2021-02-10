@@ -187,3 +187,4 @@ gopro/pics/volo2/*
 /afc/make_dataset/labeling/labeling.zip
 /afc/make_dataset/SynthText/data/results/
 /afc/make_dataset/SynthText/data/uav_photos/
+/afc/make_dataset/logs/

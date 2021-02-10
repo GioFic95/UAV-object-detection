@@ -1,4 +1,6 @@
 import pandas as pd
+import albumentations
+import re
 import glob
 import h5py
 import traceback
@@ -201,8 +203,6 @@ def test_bb(img_path='./img/bg_true/DSC03373.JPG', out_path='./img/bg_true/test.
 
 
 def test_yield():
-    import pandas as pd
-    import albumentations
     SIZE = (600, 450)
     transform = albumentations.Compose(
         [albumentations.Resize(*SIZE)],
@@ -318,20 +318,23 @@ def check_labeling_res(res_path, num_imgs):
                 data = file.read().replace('\n', '')
                 if "0.0,0.0" in data:
                     err += [f"check '0.0,0.0' error in file {tsv}"]
+                if "\t\t" in data:
+                    tab = re.search("\t\t[\[\dA-C,E-Z]", data)
+                    if tab:
+                        err += [f"check '\\t\\t' error in file {tsv} ('{tab[0]}')"]
     print(f"eq. length: {len(imgs) == num_imgs}, num names: {len(imgs)}, num imgs: {num_imgs}")
     for e in err:
         print(e)
     return len(err) != 0
 
 
-def gen_synth_dss():
+def gen_synth_dss(size=(450, 600)):
     data_path = "SynthText/data"
     res_path = os.path.join(data_path, "results")
     images_in = "uav_photos"
     images_out = "imgs_out"
     now = datetime.now().strftime("%Y_%m_%d__%H_%M_%S")
-    log = f"results/log_{now}.txt"
-    size = (450, 600)
+    log = f"logs/log_{now}.txt"
     instance_per_image = 3
     secs_per_img = None
 
@@ -361,6 +364,66 @@ def join_dss():
     if nrows != len(concat):
         exit(-1)
     concat.to_csv(out_path, index=False, sep='\t')
+
+
+def copy_empty_imgs():
+    in_path = "SynthText/data/uav_photos"
+    out_path = "SynthText/data/imgs_out"
+    in_imgs = set([img[0:8] for img in os.listdir(in_path)])
+    out_imgs = set([img[0:8] for img in os.listdir(out_path)])
+    print(in_imgs)
+    print(out_imgs)
+    for img in in_imgs - out_imgs:
+        src = os.path.join(in_path, os.path.basename(img)) + ".JPG"
+        dst = os.path.join(out_path, os.path.basename(img)) + "_0.JPG"
+        shutil.copyfile(src, dst)
+
+
+def ds_to_yolo(size=(450, 600)):
+    classes = ['CIRCLE', 'SEMICIRCLE', 'QUARTER_CIRCLE', 'TRIANGLE', 'SQUARE', 'RECTANGLE', 'TRAPEZOID', 'PENTAGON',
+               'HEXAGON', 'HEPTAGON', 'OCTAGON', 'STAR', 'CROSS']
+
+    now = datetime.now().strftime("%Y_%m_%d__%H_%M_%S")
+    log_path = f"logs/log_{now}.txt"
+
+    ds_path = "SynthText/data/imgs_out"
+    yolo_images_path = "../yolov5/data/shape_ds/images"
+    yolo_labels_path = "../yolov5/data/shape_ds/labels"
+    groups = {'train': 7, 'val': 3}
+    # split_ds_prop(ds_path, yolo_path, groups)  # todo debug
+
+    results_tsv = "SynthText/data/results/final_results.tsv"
+    df = pd.read_csv(results_tsv, sep='\t')
+    print("results columns:", df.columns)
+
+    for g_name in groups.keys():
+        print("processing", g_name)
+        in_path = os.path.join(yolo_images_path, g_name)
+        out_path = os.path.join(yolo_labels_path, g_name)
+        if os.path.exists(out_path):
+            shutil.rmtree(out_path)
+        os.mkdir(out_path)
+        with os.scandir(in_path) as it:
+            for i, img in enumerate(it):
+                img_name = img.name
+                img_row = df.loc[df['name'] == img_name]
+                if img_row.empty:
+                    print(i, "empty image:", img_name)
+                    with open(log_path, 'a') as log:
+                        log.write(f"empty image: {img_name}\n")
+                else:
+                    img_shapes = eval(img_row['shapes'].values[0])
+                    img_bbs = eval(img_row['boundingBoxes'].values[0])
+                    print(i, img_name, img_shapes, "-", img_bbs)
+                    for j, shape in enumerate(img_shapes):
+                        bb = img_bbs[j]
+                        bb = [((bb[0] + bb[2])/2)/size[1], ((bb[1] + bb[3])/2)/size[0],
+                              (bb[2] - bb[0])/size[1], (bb[3] - bb[1])/size[0]]
+                        bb = ' '.join([str(s)[:min(7, len(str(s)))] for s in bb])
+                        shape_index = classes.index(shape)
+                        out_file = os.path.join(out_path, os.path.splitext(img_name)[0] + ".txt")
+                        with open(out_file, 'a') as of:
+                            of.write(f"{shape_index} {bb}\n")
 
 
 if __name__ == '__main__':
@@ -399,7 +462,9 @@ if __name__ == '__main__':
     # split_ds_prop("D:/Pictures/drone/uav_photos", "D:/Pictures/drone/uav_split_1", groups)
     # zip_dirs("D:/Pictures/drone/uav_split_1", "D:/Pictures/drone/uav_zip_1")
 
-    if check_labeling_res("SynthText/data/results", 70):
-        exit(-1)
-    gen_synth_dss()
-    join_dss()
+    # if check_labeling_res("SynthText/data/results", 70):
+    #     exit(-1)
+    # gen_synth_dss()
+    # join_dss()
+    # copy_empty_imgs()
+    ds_to_yolo()

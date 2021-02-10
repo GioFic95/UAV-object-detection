@@ -15,14 +15,14 @@ Entry-point for generating synthetic text images, as described in:
 import os
 import os.path as osp
 import sys
-
+from shutil import copyfile
 import albumentations
 import pandas as pd
 
 from .synthgen import *
 
 
-def get_data(data_path, dataset_in, size, images_in, log):
+def get_data(data_path, dataset_in, size, images_in, images_out, log):
     """
     Generator that yields the relevant fields from the dataset.
     """
@@ -60,6 +60,8 @@ def get_data(data_path, dataset_in, size, images_in, log):
             print(error)
             with open(log_path, 'a') as lp:
                 lp.write(error)
+            dst = os.path.join(data_path, images_out, name)
+            copyfile(path, dst)
         except ValueError:
             error = f"continue for ValueError with img {name}\n"
             print(error)
@@ -98,7 +100,7 @@ def gen_synth_ds(data_path, dataset_in, dataset_out, images_in, images_out, size
                                    "alphanumericColors", "boundingBoxes", "rotations"])
     RV3 = RendererV3(data_path, max_time=secs_per_img)
 
-    for d in get_data(data_path, dataset_in, size, images_in, log):
+    for d in get_data(data_path, dataset_in, size, images_in, images_out, log):
         imname = d['name']
         print(f"\n*** processing image {imname} ***\n")
         try:
