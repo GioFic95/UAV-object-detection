@@ -170,6 +170,9 @@ class LoadImages:  # for inference
                     raise StopIteration
                 else:
                     path = self.files[self.count]
+                    if "\\" in path:
+                        path = path.replace("\\", "/")
+                        path = path.replace("\t", "/t")
                     self.new_video(path)
                     ret_val, img0 = self.cap.read()
 
