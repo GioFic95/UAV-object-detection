@@ -1,0 +1,1 @@
+python train.py --img 600 --batch 64 --epochs 300 --data shape_ds.yaml --weights weights/yolov5s.pt --wandb shape_ds

@@ -1,0 +1,9 @@
+train: ./data/shape_ds/images/train/
+val: ./data/shape_ds/images/val/
+
+# number of classes
+nc: 13
+
+# class names
+names: [ 'CIRCLE', 'SEMICIRCLE', 'QUARTER_CIRCLE', 'TRIANGLE', 'SQUARE', 'RECTANGLE', 'TRAPEZOID', 'PENTAGON',
+         'HEXAGON', 'HEPTAGON', 'OCTAGON', 'STAR', 'CROSS' ]

@@ -65,7 +65,7 @@ instead of pip and virtualenv)
    ![w_dir](w_dir.PNG)
 5. activate the virtual environment:
    ```
-   ./labeling/Scripts/activate    # on Windows or
+   .\labeling\Scripts\activate    # on Windows or
    source labeling/bin/activate   # on macOS/Linux
    ```
 6. install the requirements:
@@ -87,7 +87,7 @@ instead of pip and virtualenv)
 8. submit all the shapes in the images you work on;
 9. leave the virtual environment:
    ```
-   deactivate
+   .\labeling\Scripts\deactivate
    ```
 
 ---

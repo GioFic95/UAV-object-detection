@@ -1,0 +1,103 @@
+canIpForward: false
+cpuPlatform: Intel Haswell
+creationTimestamp: '2021-02-10T16:25:18.058-08:00'
+deletionProtection: false
+disks:
+- autoDelete: true
+  boot: true
+  deviceName: tensorflow-vm-tmpl-boot-disk
+  diskSizeGb: '300'
+  guestOsFeatures:
+  - type: UEFI_COMPATIBLE
+  - type: VIRTIO_SCSI_MULTIQUEUE
+  index: 0
+  interface: SCSI
+  kind: compute#attachedDisk
+  licenses:
+  - https://www.googleapis.com/compute/v1/projects/click-to-deploy-images/global/licenses/c2d-tensorflow
+  - https://www.googleapis.com/compute/v1/projects/click-to-deploy-images/global/licenses/c2d-dl-platform-gpu-pytorch-experimental
+  - https://www.googleapis.com/compute/v1/projects/click-to-deploy-images/global/licenses/c2d-dl-platform-gpu-pytorch-1-6
+  - https://www.googleapis.com/compute/v1/projects/debian-cloud/global/licenses/debian-10-buster
+  mode: READ_WRITE
+  source: https://www.googleapis.com/compute/v1/projects/refined-cortex-282514/zones/us-east1-c/disks/deeplearning-1-vm
+  type: PERSISTENT
+fingerprint: tIUJwRJ-_W4=
+guestAccelerators:
+- acceleratorCount: 1
+  acceleratorType: https://www.googleapis.com/compute/v1/projects/refined-cortex-282514/zones/us-east1-c/acceleratorTypes/nvidia-tesla-t4
+id: '4326134562603779972'
+kind: compute#instance
+labelFingerprint: OBijlxqMLYI=
+labels:
+  goog-dm: deeplearning-1
+machineType: https://www.googleapis.com/compute/v1/projects/refined-cortex-282514/zones/us-east1-c/machineTypes/n1-standard-8
+metadata:
+  fingerprint: HOjD5SWmfG0=
+  items:
+  - key: framework
+    value: PyTorch:1.7
+  - key: google-logging-enable
+    value: '0'
+  - key: google-monitoring-enable
+    value: '0'
+  - key: install-nvidia-driver
+    value: 'True'
+  - key: proxy-mode
+    value: project_editors
+  - key: proxy-url
+    value: 43726f173ae5e60a-dot-us-east1.notebooks.googleusercontent.com
+  - key: shutdown-script
+    value: /opt/deeplearning/bin/shutdown_script.sh
+  - key: status-config-url
+    value: https://runtimeconfig.googleapis.com/v1beta1/projects/refined-cortex-282514/configs/deeplearning-1-config
+  - key: status-uptime-deadline
+    value: '600'
+  - key: status-variable-path
+    value: status
+  - key: title
+    value: PyTorch/CUDA11.0.GPU
+  - key: version
+    value: nightly-2021-01-20-debian-10-test
+  kind: compute#metadata
+name: deeplearning-1-vm
+networkInterfaces:
+- accessConfigs:
+  - kind: compute#accessConfig
+    name: Interface 0 External NAT
+    natIP: 35.243.132.253
+    networkTier: PREMIUM
+    type: ONE_TO_ONE_NAT
+  fingerprint: v0A5I5JHMIo=
+  kind: compute#networkInterface
+  name: nic0
+  network: https://www.googleapis.com/compute/v1/projects/refined-cortex-282514/global/networks/default
+  networkIP: 10.142.0.2
+  subnetwork: https://www.googleapis.com/compute/v1/projects/refined-cortex-282514/regions/us-east1/subnetworks/default
+scheduling:
+  automaticRestart: true
+  onHostMaintenance: TERMINATE
+  preemptible: false
+selfLink: https://www.googleapis.com/compute/v1/projects/refined-cortex-282514/zones/us-east1-c/instances/deeplearning-1-vm
+serviceAccounts:
+- email: 838281633550-compute@developer.gserviceaccount.com
+  scopes:
+  - https://www.googleapis.com/auth/cloud.useraccounts.readonly
+  - https://www.googleapis.com/auth/devstorage.read_only
+  - https://www.googleapis.com/auth/logging.write
+  - https://www.googleapis.com/auth/monitoring.write
+  - https://www.googleapis.com/auth/cloudruntimeconfig
+  - https://www.googleapis.com/auth/compute
+shieldedInstanceConfig:
+  enableIntegrityMonitoring: true
+  enableSecureBoot: false
+  enableVtpm: true
+shieldedInstanceIntegrityPolicy:
+  updateAutoLearnPolicy: true
+startRestricted: false
+status: RUNNING
+tags:
+  fingerprint: YnpajJ_AoEk=
+  items:
+  - deeplearning-1-deployment
+  - deeplearning-vm
+zone: https://www.googleapis.com/compute/v1/projects/refined-cortex-282514/zones/us-east1-c
