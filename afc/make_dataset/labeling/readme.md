@@ -24,6 +24,8 @@ and select shape name and color from a drop-down list.
 [On YouTube](https://youtu.be/D5o2BuDhtRc) you can find a brief "tutorial"
 where I explain how to use this GUI.
 
+![gui](gui.png)
+
 ---
 
 ### Installation and usage:
