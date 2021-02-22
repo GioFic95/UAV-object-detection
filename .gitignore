@@ -188,3 +188,9 @@ gopro/pics/volo2/*
 /afc/make_dataset/SynthText/data/results/
 /afc/make_dataset/SynthText/data/uav_photos/
 /afc/make_dataset/logs/
+/afc/yolov4/data/
+/afc/yolov4/images/
+/afc/yolov4/inference/
+/afc/yolov4/weights/
+/afc/yolov4/mish-cuda/
+/afc/desktop.ini

@@ -1,0 +1,16 @@
+Cython
+numpy>=1.18.5
+opencv-python>=4.1.2
+# torch>=1.5.1
+matplotlib>=3.2.2
+pillow
+tensorboard>=2.2
+PyYAML>=5.3
+# torchvision
+scipy>=1.4.1
+tqdm>=4.41.0
+# git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI
+pycocotools>=2.0
+
+# Nvidia Apex (optional) for mixed precision training --------------------------
+# git clone https://github.com/NVIDIA/apex && cd apex && pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" . --user
