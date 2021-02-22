@@ -194,3 +194,5 @@ gopro/pics/volo2/*
 /afc/yolov4/weights/
 /afc/yolov4/mish-cuda/
 /afc/desktop.ini
+/afc/yolov4/wandb/
+/afc/yolov4/runs/

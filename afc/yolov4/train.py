@@ -1,3 +1,4 @@
+import os
 import argparse
 
 import torch.distributed as dist
@@ -7,6 +8,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 import torch.utils.data
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
+import wandb
 
 import test  # import test.py to get mAP after each epoch
 from models.yolo import Model
@@ -164,6 +166,15 @@ def train(hyp, tb_writer, opt, device):
     # https://discuss.pytorch.org/t/a-problem-occured-when-resuming-an-optimizer/28822
     # plot_lr_scheduler(optimizer, scheduler, epochs)
 
+    # Logging
+    if rank in [-1, 0] and wandb and wandb.run is None:
+        opt.hyp = hyp  # add hyperparameters
+        wandb_run = wandb.init(config=opt, resume="allow",
+                               project=opt.wandb,
+                               name=Path(log_dir).stem,
+                               id=ckpt.get('wandb_id') if 'ckpt' in locals() else None)
+    loggers = {'wandb': wandb}  # loggers dict
+
     # DP mode
     if device.type != 'cpu' and rank == -1 and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
@@ -319,10 +330,14 @@ def train(hyp, tb_writer, opt, device):
                 # Plot
                 if ni < 3:
                     f = str(Path(log_dir) / ('train_batch%g.jpg' % ni))  # filename
-                    result = plot_images(images=imgs, targets=targets, paths=paths, fname=f)
-                    if tb_writer and result is not None:
-                        tb_writer.add_image(f, result, dataformats='HWC', global_step=epoch)
+                    Thread(target=plot_images, args=(imgs, targets, paths, f), daemon=True).start()
+                    # result = plot_images(images=imgs, targets=targets, paths=paths, fname=f)
+                    # if tb_writer and result is not None:
+                    #     tb_writer.add_image(f, result, dataformats='HWC', global_step=epoch)
                         # tb_writer.add_graph(model, imgs)  # add model to tensorboard
+                elif ni == 10 and wandb:
+                    wandb.log({"Mosaics": [wandb.Image(str(x), caption=x.name) for x in Path(log_dir).glob('train*.jpg')
+                                           if x.exists()]}, commit=False)
 
             # end batch ------------------------------------------------------------------------------------------------
 
@@ -343,6 +358,8 @@ def train(hyp, tb_writer, opt, device):
                                                  model=ema.ema.module if hasattr(ema.ema, 'module') else ema.ema,
                                                  single_cls=opt.single_cls,
                                                  dataloader=testloader,
+                                                 plots=final_epoch,
+                                                 log_imgs=16 if wandb else 0,
                                                  save_dir=log_dir)
 
                 # Write
@@ -352,12 +369,14 @@ def train(hyp, tb_writer, opt, device):
                     os.system('gsutil cp %s gs://%s/results/results%s.txt' % (results_file, opt.bucket, opt.name))
 
                 # Tensorboard
-                if tb_writer:
-                    tags = ['train/giou_loss', 'train/obj_loss', 'train/cls_loss',
-                            'metrics/precision', 'metrics/recall', 'metrics/mAP_0.5', 'metrics/mAP_0.5:0.95',
-                            'val/giou_loss', 'val/obj_loss', 'val/cls_loss']
-                    for x, tag in zip(list(mloss[:-1]) + list(results), tags):
+                tags = ['train/giou_loss', 'train/obj_loss', 'train/cls_loss',
+                        'metrics/precision', 'metrics/recall', 'metrics/mAP_0.5', 'metrics/mAP_0.5:0.95',
+                        'val/giou_loss', 'val/obj_loss', 'val/cls_loss']
+                for x, tag in zip(list(mloss[:-1]) + list(results), tags):
+                    if tb_writer:
                         tb_writer.add_scalar(tag, x, epoch)
+                    if wandb:
+                        wandb.log({tag: x}, step=epoch, commit=tag == tags[-1])  # W&B
 
                 # Update best mAP
                 fi = fitness(np.array(results).reshape(1, -1))  # fitness_i = weighted combination of [P, R, mAP, F1]
@@ -372,7 +391,8 @@ def train(hyp, tb_writer, opt, device):
                             'best_fitness': best_fitness,
                             'training_results': f.read(),
                             'model': ema.ema.module if hasattr(ema, 'module') else ema.ema,
-                            'optimizer': None if final_epoch else optimizer.state_dict()}
+                            'optimizer': None if final_epoch else optimizer.state_dict(),
+                            'wandb_id': wandb_run.id if wandb else None}
 
                 # Save last, best and delete
                 torch.save(ckpt, last)
@@ -395,13 +415,43 @@ def train(hyp, tb_writer, opt, device):
         # Finish
         if not opt.evolve:
             plot_results(save_dir=log_dir)  # save as results.png
+            if wandb:
+                files = ['results.png', 'confusion_matrix.png', *[f'{x}_curve.png' for x in ('F1', 'PR', 'P', 'R')]]
+                wandb.log({"Results": [wandb.Image(str(Path(log_dir) / f), caption=f) for f in files
+                                       if (Path(log_dir) / f).exists()]})
+                try:
+                    print("last:", last)
+                    wandb.log_artifact(artifact_or_path=str(last), type='model', name="last")
+                except ValueError:
+                    print("last model not found in", last)
+                try:
+                    print("flast:", flast)
+                    wandb.log_artifact(artifact_or_path=str(flast), type='model', name="flast")
+                except ValueError:
+                    print("flast model not found in", flast)
+                try:
+                    print("best:", best)
+                    wandb.log_artifact(artifact_or_path=str(best), type='model', name="best")
+                except ValueError:
+                    print("best model not found in", best)
+                try:
+                    print("fbest:", fbest)
+                    wandb.log_artifact(artifact_or_path=str(fbest), type='model', name="fbest")
+                except ValueError:
+                    print("fbest model not found in", fbest)
         print('%g epochs completed in %.3f hours.\n' % (epoch - start_epoch + 1, (time.time() - t0) / 3600))
 
     dist.destroy_process_group() if rank not in [-1, 0] else None
+    wandb.run.finish() if wandb and wandb.run else None
     torch.cuda.empty_cache()
     return results
 
 
+"""
+Example run:
+python train.py --img 600 --batch 64 --epochs 300 --data shape_ds.yaml --weights weights/yolov4s-mish_.pt --wandb shape_ds
+python train.py --img 600 --batch 1 --epochs 1 --data coco128.yaml --weights weights/yolov4s-mish_.pt --wandb shape_ds
+"""
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--cfg', type=str, default='models/yolov4l-mish.yaml', help='model.yaml path')
@@ -426,6 +476,7 @@ if __name__ == '__main__':
     parser.add_argument('--single-cls', action='store_true', help='train as single-class dataset')
     parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode')
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
+    parser.add_argument('--wandb', type=str, default='YOLOv4', help='W&B project name')
     opt = parser.parse_args()
 
     last = get_latest_run() if opt.resume == 'get_last' else opt.resume  # resume from most recent run

@@ -1,5 +1,6 @@
 import argparse
 import json
+import wandb
 
 from models.experimental import *
 from utils.datasets import *
@@ -7,6 +8,7 @@ from utils.utils import *
 from utils import torch_utils
 from models.yolo import Model
 from mish_cuda import MishCuda as Mish
+from utils.metrics import ConfusionMatrix
 
 
 def test(data,
@@ -23,7 +25,10 @@ def test(data,
          dataloader=None,
          save_dir='',
          merge=False,
-         save_txt=False):
+         save_txt=False,
+         plots=True,
+         log_imgs=16):
+    save_dir = Path(save_dir)
     # Initialize/load model and set device
     training = model is not None
     with open(data) as f:
@@ -79,12 +84,15 @@ def test(data,
                                        hyp=None, augment=False, cache=False, pad=0.5, rect=True)[0]
 
     seen = 0
+    confusion_matrix = ConfusionMatrix(nc=nc)
     names = model.names if hasattr(model, 'names') else model.module.names
+
+    wb_names = {k: v for k, v in enumerate(model.names if hasattr(model, 'names') else model.module.names)}
     coco91class = coco80_to_coco91_class()
     s = ('%20s' + '%12s' * 6) % ('Class', 'Images', 'Targets', 'P', 'R', 'mAP@.5', 'mAP@.5:.95')
     p, r, f1, mp, mr, map50, map, t0, t1 = 0., 0., 0., 0., 0., 0., 0., 0., 0.
     loss = torch.zeros(3, device=device)
-    jdict, stats, ap, ap_class = [], [], [], []
+    jdict, stats, ap, ap_class, wandb_images = [], [], [], [], []
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
         img = img.to(device, non_blocking=True)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -131,6 +139,18 @@ def test(data,
                     with open(txt_path + '.txt', 'a') as f:
                         f.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
 
+            # W&B logging
+            if plots and len(wandb_images) < log_imgs:
+                path = Path(paths[si])
+                box_data = [
+                    {"position": {"minX": xyxy[0], "minY": xyxy[1], "maxX": xyxy[2], "maxY": xyxy[3]},
+                     "class_id": int(cls),
+                     "box_caption": "%s %.3f" % (wb_names[cls], conf),
+                     "scores": {"class_score": conf},
+                     "domain": "pixel"} for *xyxy, conf, cls in pred.tolist()]
+                boxes = {"predictions": {"box_data": box_data, "class_labels": wb_names}}  # inference-space
+                wandb_images.append(wandb.Image(img[si], boxes=boxes, caption=path.name))
+
             # Clip boxes to image bounds
             clip_coords(pred, (height, width))
 
@@ -156,6 +176,8 @@ def test(data,
 
                 # target boxes
                 tbox = xywh2xyxy(labels[:, 1:5]) * whwh
+                if plots:
+                    confusion_matrix.process_batch(pred.clone(), torch.cat((labels[:, 0:1], tbox), 1))
 
                 # Per target class
                 for cls in torch.unique(tcls_tensor):
@@ -209,6 +231,13 @@ def test(data,
     t = tuple(x / seen * 1E3 for x in (t0, t1, t0 + t1)) + (imgsz, imgsz, batch_size)  # tuple
     if not training:
         print('Speed: %.1f/%.1f/%.1f ms inference/NMS/total per %gx%g image at batch-size %g' % t)
+
+    # Plots
+    if plots:
+        confusion_matrix.plot(save_dir=save_dir, names=list(wb_names.values()))
+        if wandb and wandb.run:
+            val_batches = [wandb.Image(str(f), caption=f.name) for f in sorted(save_dir.glob('test*.jpg'))]
+            wandb.log({"Images": wandb_images, "Validation": val_batches}, commit=False)
 
     # Save JSON
     if save_json and len(jdict):
