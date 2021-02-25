@@ -196,3 +196,4 @@ gopro/pics/volo2/*
 /afc/desktop.ini
 /afc/yolov4/wandb/
 /afc/yolov4/runs/
+/afc/make_dataset/SynthText/data/logs/

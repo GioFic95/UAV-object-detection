@@ -278,6 +278,10 @@ def test(data,
     return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t
 
 
+"""
+Example run:
+python test.py --data data/shape_ds.yaml --img 600 --conf 0.001 --iou 0.65 --weights weights/best.pt --batch 64 --task test
+"""
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='test.py')
     parser.add_argument('--weights', nargs='+', type=str, default='yolov5s.pt', help='model.pt path(s)')

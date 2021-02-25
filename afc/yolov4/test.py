@@ -20,7 +20,7 @@ def test(data,
          save_json=False,
          single_cls=False,
          augment=False,
-         verbose=False,
+         verbose=True,
          model=None,
          dataloader=None,
          save_dir='',
@@ -28,7 +28,12 @@ def test(data,
          save_txt=False,
          plots=True,
          log_imgs=16):
-    save_dir = Path(save_dir)
+    if not save_dir:
+        save_dir = Path(increment_dir('runs/test/exp/'))  # increment run
+        save_dir.mkdir(parents=True, exist_ok=True)  # make dir
+        print("save_dir:", save_dir)
+    else:
+        save_dir = Path(save_dir)
     # Initialize/load model and set device
     training = model is not None
     with open(data) as f:
@@ -202,10 +207,12 @@ def test(data,
             stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
 
         # Plot images
-        if batch_i < 1:
-            f = Path(save_dir) / ('test_batch%g_gt.jpg' % batch_i)  # filename
+        if batch_i < 3:
+            f = save_dir / ('test_batch%g_gt.jpg' % batch_i)  # filename
+            print("save batch gt", f)
             plot_images(img, targets, paths, str(f), names)  # ground truth
-            f = Path(save_dir) / ('test_batch%g_pred.jpg' % batch_i)
+            f = save_dir / ('test_batch%g_pred.jpg' % batch_i)
+            print("save batch label", f)
             plot_images(img, output_to_target(output, width, height), paths, str(f), names)  # predictions
 
     # Compute statistics
@@ -223,7 +230,7 @@ def test(data,
     print(pf % ('all', seen, nt.sum(), mp, mr, map50, map))
 
     # Print results per class
-    if verbose and nc > 1 and len(stats):
+    if (verbose or nc < 50) and nc > 1 and len(stats):
         for i, c in enumerate(ap_class):
             print(pf % (names[c], seen, nt[c], p[i], r[i], ap50[i], ap[i]))
 
