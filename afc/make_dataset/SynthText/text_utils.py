@@ -21,7 +21,7 @@ def move_bb(bbs, t):
     return bbs + t[:, None, None]
 
 
-def crop_safe(arr, rect, bbs=[], pad=0):
+def crop_safe(arr, rect, bbs=[], pad=0, viz=False):
     """
     ARR : arr to crop
     RECT: (x,y,w,h) : area to crop to
@@ -41,10 +41,12 @@ def crop_safe(arr, rect, bbs=[], pad=0):
         for i in range(len(bbs)):
             bbs[i, 0] -= v0[0]
             bbs[i, 1] -= v0[1]
-        # print("crop safe", arr, bbs)
+        if viz:
+            print("crop safe", arr, bbs)
         return arr, bbs
     else:
-        # print("crop safe", arr, bbs)
+        if viz:
+            print("crop safe", arr, bbs)
         return arr
 
 
@@ -157,7 +159,7 @@ class RenderFont(object):
         # self.visualize_bb(surf_arr,bbs)
         return surf_arr, words, bbs
 
-    def render_curved(self, font, word_text):
+    def render_curved(self, font, word_text, viz=False):
         """
         use curved baseline for rendering word
         """
@@ -180,7 +182,8 @@ class RenderFont(object):
         curve = [BS['curve'](i - mid_idx) for i in range(wl)]
         curve[mid_idx] = 0
         rots = [-int(math.degrees(math.atan(BS['diff'](i - mid_idx) / (font.size / 2)))) for i in range(wl)]
-        # print("font size:", font.size, "curve:", curve, "rots:", rots)
+        if viz:
+            print("font size:", font.size, "curve:", curve, "rots:", rots)
 
         bbs = []
         # place middle char
@@ -240,11 +243,12 @@ class RenderFont(object):
         # crop the surface to fit the text:
         bbs = np.array(bbs)
         surf_arr, bbs = crop_safe(pygame.surfarray.pixels_alpha(surf), rect_union, bbs, pad=5)
-        # print(f"surf_arr: {surf_arr}, bbs: {bbs}")
+        if viz:
+            print(f"surf_arr: {surf_arr}, bbs: {bbs}")
         surf_arr = surf_arr.swapaxes(0, 1)
         return surf_arr, word_text, bbs
 
-    def place_text(self, text_arrs, shape, bbs, start, rot):
+    def place_text(self, text_arrs, shape, bbs, start, rot, viz=False):
         areas = [-np.prod(ta.shape) for ta in text_arrs]
         order = np.argsort(areas)
         out_arr = np.zeros(shape)
@@ -258,9 +262,10 @@ class RenderFont(object):
             bbs[i] = move_bb(bbs[i], loc[::-1])
 
             # blit the text onto the canvas
-            # print("start:", start, "loc:", loc, "h:", h, "w:", w, "text_arrs:", text_arrs[i].shape,
-            #       "out_arr:", out_arr.shape,
-            #       "out_arr[...]:", out_arr[loc[0]:loc[0] + w, loc[1]:loc[1] + h].shape)
+            if viz:
+                print("start:", start, "loc:", loc, "h:", h, "w:", w, "text_arrs:", text_arrs[i].shape,
+                      "out_arr:", out_arr.shape,
+                      "out_arr[...]:", out_arr[loc[0]:loc[0] + w, loc[1]:loc[1] + h].shape)
             out_arr[loc[0]:loc[0] + w, loc[1]:loc[1] + h] += text_arrs[i]
             out_arr[loc[0]-10:loc[0]+w+10, loc[1]-10:loc[1]+h+10] =\
                 ndimage.rotate(out_arr[loc[0]-10:loc[0]+w+10, loc[1]-10:loc[1]+h+10], -rot, reshape=False)
@@ -280,7 +285,7 @@ class RenderFont(object):
             coords[1, 3, i] += bbs[i, 3]
         return coords
 
-    def render_sample(self, font, shape, start, rot):
+    def render_sample(self, font, shape, start, rot, viz=False):
         """
         Places text in the "collision-free" region as indicated
         in the mask -- 255 for unsafe, 0 for safe.
@@ -292,7 +297,8 @@ class RenderFont(object):
         # find the maximum height in pixels:
         max_font_h = min(0.9 * H, (1 / f_asp) * W / (self.min_nchar + 1))  # todo check
         max_font_h = min(max_font_h, self.max_font_h)
-        # print("h:", H, "w", W, "max_font_h:", max_font_h)
+        if viz:
+            print("h:", H, "w", W, "max_font_h:", max_font_h)
         if max_font_h < self.min_font_h:
             print("not possible to place any text here: max_font_h < self.min_font_h")
             return
@@ -301,7 +307,8 @@ class RenderFont(object):
         i = 0
         while i < self.max_shrink_trials and max_font_h > self.min_font_h:
             # sample a random font-height:
-            # print("font-height:", f_h_px, self.min_font_h, max_font_h)
+            if viz:
+                print("font-height:", f_h_px, self.min_font_h, max_font_h)
             f_h_px = max_font_h
             # convert from pixel-height to font-point-size:
             f_h = self.font_state.get_font_size(font, f_h_px)
@@ -310,7 +317,8 @@ class RenderFont(object):
 
             # compute the max-number of lines/chars-per-line:
             nline, nchar = 1, 1
-            print("  > nline = %d, nchar = %d" % (nline, nchar))
+            if viz:
+                print("  > nline = %d, nchar = %d" % (nline, nchar))
 
             assert nline >= 1 and nchar >= self.min_nchar
 
@@ -324,7 +332,8 @@ class RenderFont(object):
             # render the text:
             txt_arr, txt, bb = self.render_curved(font, text)
             bb = self.bb_xywh2coords(bb)
-            # print(f"txt_arr: {txt_arr}, txt: {txt}, bb: {bb}")
+            if viz:
+                print(f"txt_arr: {txt_arr}, txt: {txt}, bb: {bb}")
 
             # make sure that the text-array is not bigger than mask array:
             if np.any(np.r_[txt_arr.shape[:2]] > np.r_[shape]):
@@ -333,9 +342,11 @@ class RenderFont(object):
 
             # position the text within the mask:
             text_mask, bb = self.place_text([txt_arr], shape, [bb], start, rot)
-            # print(f"text_mask: {text_mask}, bb: {bb}")
+            if viz:
+                print(f"text_mask: {text_mask}, bb: {bb}")
             if text_mask.any():  # successful in placing the text collision-free:
-                print("successful in placing the text collision-free")
+                if viz:
+                    print("successful in placing the text collision-free")
                 return text_mask, bb[0], text
         return  # None
 
@@ -352,7 +363,7 @@ class FontState(object):
     Defines the random state of the font rendering  
     """
     size = [50, 10]  # normal dist mean, std
-    underline = 0.05
+    underline = 0  # 0.05
     strong = 0  # 0.5
     oblique = 0  # 0.2
     wide = 0.5
@@ -491,11 +502,12 @@ class TextSource(object):
     def sample(self, nline_max, nchar_max, kind='WORD'):
         return self.fdict[kind](nline_max, nchar_max)
 
-    def sample_word(self, nline_max, nchar_max, niter=100):
+    def sample_word(self, nline_max, nchar_max, niter=100, viz=False):
         rand_line = self.txt[np.random.choice(len(self.txt))]
         words = rand_line.split()
         rand_word = random.choice(words)
-        print(f"r. line: {rand_line}, words: {words}, r. word: {rand_word}")
+        if viz:
+            print(f"r. line: {rand_line}, words: {words}, r. word: {rand_word}")
 
         iter = 0
         while iter < niter and len(rand_word) > nchar_max:
@@ -503,7 +515,8 @@ class TextSource(object):
             words = rand_line.split()
             rand_word = random.choice(words)
             iter += 1
-            print(f"r. line: {rand_line}, words: {words}, r. word: {rand_word}")
+            if viz:
+                print(f"r. line: {rand_line}, words: {words}, r. word: {rand_word}")
 
         if len(rand_word) > nchar_max:
             print("not good word")

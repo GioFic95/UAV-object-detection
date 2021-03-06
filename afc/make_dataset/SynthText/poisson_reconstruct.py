@@ -179,7 +179,6 @@ if __name__ == '__main__':
     im_dst = cv2.imread('gg.jpg').astype('float32')
 
     mu = np.mean(np.reshape(im_src, [im_src.shape[0] * im_src.shape[1], 3]), axis=0)
-    # print mu
     sz = (700, 700)
     im_src = cv2.resize(im_src, sz)
     im_dst = cv2.resize(im_dst, sz)

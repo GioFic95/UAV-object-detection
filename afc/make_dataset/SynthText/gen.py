@@ -22,7 +22,7 @@ import pandas as pd
 from .synthgen import *
 
 
-def get_data(data_path, dataset_in, size, images_in, images_out, log):
+def get_data(data_path, dataset_in, size, images_in, images_out, log, cp_empty, viz):
     """
     Generator that yields the relevant fields from the dataset.
     """
@@ -51,7 +51,8 @@ def get_data(data_path, dataset_in, size, images_in, images_out, log):
             colors = row["shapeColor"].values
             transformed = transform(image=image, bboxes=starts, class_labels=shapes)
             tr_starts = np.array(transformed["bboxes"]).round().astype(np.int)
-            print("STARTS:", tr_starts)
+            if viz:
+                print("STARTS:", tr_starts)
 
             yield {"name": name, "image": transformed["image"], "starts": tr_starts, "rots": rots,
                    "shapes": shapes, "colors": colors}
@@ -60,8 +61,9 @@ def get_data(data_path, dataset_in, size, images_in, images_out, log):
             print(error)
             with open(log_path, 'a') as lp:
                 lp.write(error)
-            dst = os.path.join(data_path, images_out, name)
-            copyfile(path, dst)
+            if cp_empty:
+                dst = os.path.join(data_path, images_out, name)
+                copyfile(path, dst)
         except ValueError:
             error = f"continue for ValueError with img {name}\n"
             print(error)
@@ -95,22 +97,24 @@ def add_res_to_db(df, d, res, data_path, images_out):
 
 
 def gen_synth_ds(data_path, dataset_in, dataset_out, images_in, images_out, size, instance_per_image,
-                 secs_per_img, log, viz=False):
+                 secs_per_img, log, cp_empty=True, viz=False):
     df_out = pd.DataFrame(columns=["name", "shapes", "shapeColors", "alphanumerics",
                                    "alphanumericColors", "boundingBoxes", "rotations"])
     RV3 = RendererV3(data_path, max_time=secs_per_img)
 
-    for d in get_data(data_path, dataset_in, size, images_in, images_out, log):
+    for i, d in enumerate(get_data(data_path, dataset_in, size, images_in, images_out, log, cp_empty, viz)):
         imname = d['name']
-        print(f"\n*** processing image {imname} ***\n")
+        print(f"\n*** {i}.\tprocessing image {imname} ***\n")
         try:
             # get the image:
             img = d['image']
             starts = d['starts']
-            print("STARTS 1:", starts)
+            if viz:
+                print("STARTS 1:", starts)
             rots = d['rots']
             res = RV3.render_text(img, starts, rots, ninstance=instance_per_image, viz=viz)
-            # print("RES:", len(res), res[0]['txt'])
+            if viz:
+                print("RES:", len(res), res[0]['txt'])
             if len(res) > 0:
                 # non-empty : successful in placing text:
                 df_out = add_res_to_db(df_out, d, res, data_path, images_out)

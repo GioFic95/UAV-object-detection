@@ -17,8 +17,7 @@ def sample_weighted(p_dict):
 
 class Layer(object):
 
-    def __init__(self, alpha, color):
-
+    def __init__(self, alpha, color, viz=False):
         # alpha for the whole image:
         assert alpha.ndim == 2
         self.alpha = alpha
@@ -37,7 +36,8 @@ class Layer(object):
         elif color.ndim == 3:  # rgb image
             self.color = color.copy().astype('uint8')
         else:
-            print(color.shape)
+            if viz:
+                print(color.shape)
             raise Exception("color datatype not understood")
 
 
@@ -56,7 +56,7 @@ class FontColor(object):
         self.colorsLAB = np.r_[self.colorsRGB[:, 0:3], self.colorsRGB[:, 6:9]].astype('uint8')
         self.colorsLAB = np.squeeze(cv.cvtColor(self.colorsLAB[None, :, :], cv.COLOR_RGB2Lab))
 
-    def guided_sample(self):
+    def guided_sample(self, viz=False):
         colors_dir = "./colors"
         colors = os.listdir(colors_dir)
         color_name = random.choice(colors)
@@ -64,7 +64,8 @@ class FontColor(object):
         pixels = list(color_img[:, :, :3].reshape(color_img.shape[0] * color_img.shape[1], 3))
         color = random.choice(pixels)
         color_name = os.path.splitext(color_name)[0].upper()
-        print("color:", color_name, color)
+        if viz:
+            print("color:", color_name, color)
         # return color, [0, 0, 0], color_name
         return color, color, color_name
 
@@ -254,7 +255,7 @@ class Colorize(object):
         fg_col, bg_col, col_name = self.font_color.guided_sample()
         return Layer(alpha=text_arr, color=fg_col), fg_col, bg_col, col_name
 
-    def process(self, text_arr, bg_arr, min_h):
+    def process(self, text_arr, bg_arr, min_h, viz=False):
         """
         text_arr : one alpha mask : nxm, uint8
         bg_arr   : background image: nxmx3, uint8
@@ -267,7 +268,8 @@ class Colorize(object):
         bg_col = np.mean(np.mean(bg_arr, axis=0), axis=0)
         l_bg = Layer(alpha=255 * np.ones_like(text_arr, 'uint8'), color=bg_col)
 
-        print("l_text alpha 0:", np.unique(l_text.alpha))
+        if viz:
+            print("l_text alpha 0:", np.unique(l_text.alpha))
         l_text.alpha = l_text.alpha * np.clip(0.88 + 0.1 * np.random.randn(), 0.85, 0.95)
 
         layers = [l_text]
@@ -328,7 +330,8 @@ class Colorize(object):
             # imperceptible text. In this case,
             # just do a normal blend:
             layers[-1] = l_bg
-            print("normal blend")
+            if viz:
+                print("normal blend")
             return self.merge_down(layers, blends).color, col_name
 
         return l_out, col_name

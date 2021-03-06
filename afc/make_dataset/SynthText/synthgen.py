@@ -99,8 +99,8 @@ class RendererV3(object):
         font = self.text_renderer.font_state.init_font(font)
 
         render_res = self.text_renderer.render_sample(font, shape, start, rot)
-        print("render_res is None:", render_res is None)
         if render_res is None:  # rendering not successful
+            print("render_res is None")
             return
         else:
             text_mask, bb, text = render_res
@@ -210,7 +210,8 @@ class RendererV3(object):
                 if txt_render_res is not None:
                     placed = True
                     img, text, bb, col_name = txt_render_res
-                    print("text synth:", text)
+                    if viz:
+                        print("text synth:", text)
                     # store the result:
                     itext.append(text)
                     ibb.append(bb)
