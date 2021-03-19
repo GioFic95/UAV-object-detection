@@ -69,7 +69,8 @@ def test(data,
     with open(data) as f:
         data = yaml.load(f, Loader=yaml.SafeLoader)  # model dict
     check_dataset(data)  # check
-    nc = 1 if single_cls else int(data['nc'])  # number of classes
+    nc1 = 1 if single_cls else int(data['nc1'])  # number of classes  # edit
+    nc2 = 1 if single_cls else int(data['nc2'])  # number of classes  # edit
     iouv = torch.linspace(0.5, 0.95, 10).to(device)  # iou vector for mAP@0.5:0.95
     niou = iouv.numel()
 
@@ -89,14 +90,22 @@ def test(data,
                                        prefix=colorstr('test: ' if opt.task == 'test' else 'val: '))[0]
 
     seen = 0
-    confusion_matrix = ConfusionMatrix(nc=nc)
-    names = {k: v for k, v in enumerate(model.names if hasattr(model, 'names') else model.module.names)}
+    confusion_matrix1 = ConfusionMatrix(nc=nc1)
+    confusion_matrix2 = ConfusionMatrix(nc=nc2)  # edit
+    names1 = {k: v for k, v in enumerate(model.names1 if hasattr(model, 'names1') else model.module.names1)}  # edit
+    names2 = {k: v for k, v in enumerate(model.names2 if hasattr(model, 'names2') else model.module.names2)}  # edit
     coco91class = coco80_to_coco91_class()
     s = ('%20s' + '%12s' * 6) % ('Class', 'Images', 'Targets', 'P', 'R', 'mAP@.5', 'mAP@.5:.95')
-    p, r, f1, mp, mr, map50, map, t0, t1 = 0., 0., 0., 0., 0., 0., 0., 0., 0.
-    loss = torch.zeros(3, device=device)
-    jdict, stats, ap, ap_class, wandb_images = [], [], [], [], []
+    t0, t1 = 0., 0.
+    p_1, r_1, f1_1, mp_1, mr_1, map50_1, map_1 = 0., 0., 0., 0., 0., 0., 0.
+    p_2, r_2, f1_2, mp_2, mr_2, map50_2, map_2 = 0., 0., 0., 0., 0., 0., 0.  # edit
+    loss = torch.zeros(4, device=device)  # edit
+    jdict, stats1, stats2, ap_1, ap_2, ap50_1, ap50_2, ap_class_1, ap_class_2, wandb_images =\
+        [], [], [], [], [], [], [], [], [], []  # edit
+
+    # targets: img_id, cls1, cls2, xywh  # edit
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
+        # print("targets 105:", targets.shape, targets)  # todo
         img = img.to(device, non_blocking=True)
         img = img.half() if half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -111,26 +120,31 @@ def test(data,
 
             # Compute loss
             if compute_loss:
-                loss += compute_loss([x.float() for x in train_out], targets)[1][:3]  # box, obj, cls
+                # print("new_loss:", new_loss.shape)  # todo
+                loss += compute_loss([x.float() for x in train_out], targets)[1][:4]  # box, obj, cls1, cls2  # edit
 
             # Run NMS
-            targets[:, 2:] *= torch.Tensor([width, height, width, height]).to(device)  # to pixels
+            targets[:, 3:] *= torch.Tensor([width, height, width, height]).to(device)  # to pixels  # edit
             lb = [targets[targets[:, 0] == i, 1:] for i in range(nb)] if save_hybrid else []  # for autolabelling
             t = time_synchronized()
-            output = non_max_suppression(inf_out, conf_thres=conf_thres, iou_thres=iou_thres, labels=lb)
+            output = non_max_suppression(
+                inf_out, conf_thres=conf_thres, iou_thres=iou_thres, labels=lb, nc1=nc1, nc2=nc2)  # edit
             t1 += time_synchronized() - t
 
         # Statistics per image
-        for si, pred in enumerate(output):
-            labels = targets[targets[:, 0] == si, 1:]
+        for si, pred in enumerate(output):  # pred: xyxy, conf1, cls1, conf2, cls2  # edit
+            labels = targets[targets[:, 0] == si, 1:]  # labels: cls1, cls2, xywh  # edit
+            # print("labels 130:", targets.shape, pred.shape, labels.shape, targets, labels)  # todo
             nl = len(labels)
-            tcls = labels[:, 0].tolist() if nl else []  # target class
+            tcls1 = labels[:, 0].tolist() if nl else []  # target class 1
+            tcls2 = labels[:, 1].tolist() if nl else []  # target class 2  # edit
             path = Path(paths[si])
             seen += 1
 
             if len(pred) == 0:
                 if nl:
-                    stats.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls))
+                    stats1.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls1))
+                    stats2.append((torch.zeros(0, niou, dtype=torch.bool), torch.Tensor(), torch.Tensor(), tcls2))  # edit
                 continue
 
             # Predictions
@@ -140,24 +154,31 @@ def test(data,
             # Append to text file
             if save_txt:
                 gn = torch.tensor(shapes[si][0])[[1, 0, 1, 0]]  # normalization gain whwh
-                for *xyxy, conf, cls in predn.tolist():
+                for *xyxy, conf1, cls1, conf2, cls2 in predn.tolist():
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                    line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
+                    line = (cls1, cls2, *xywh, conf1, conf2) if save_conf else (cls1, cls2, *xywh)  # label format  # edit
                     with open(save_dir / 'labels' / (path.stem + '.txt'), 'a') as f:
                         f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
-            # W&B logging
+            # W&B logging  # edit
             if plots and len(wandb_images) < log_imgs:
                 box_data = [{"position": {"minX": xyxy[0], "minY": xyxy[1], "maxX": xyxy[2], "maxY": xyxy[3]},
-                             "class_id": int(cls),
-                             "box_caption": "%s %.3f" % (names[cls], conf),
-                             "scores": {"class_score": conf},
-                             "domain": "pixel"} for *xyxy, conf, cls in pred.tolist()]
-                boxes = {"predictions": {"box_data": box_data, "class_labels": names}}  # inference-space
+                             "class_id": int(cls1),
+                             "box_caption": "%s (%s) %.3f" % (names1[cls1], names2[cls2], conf1),
+                             "scores": {"class_score": conf1},
+                             "domain": "pixel"} for *xyxy, conf1, cls1, conf2, cls2 in pred.tolist()]
+                boxes = {"predictions": {"box_data": box_data, "class_labels": names1}}  # inference-space
+                wandb_images.append(wandb.Image(img[si], boxes=boxes, caption=path.name))
+                box_data = [{"position": {"minX": xyxy[0], "minY": xyxy[1], "maxX": xyxy[2], "maxY": xyxy[3]},
+                             "class_id": int(cls2),
+                             "box_caption": "(%s) %s %.3f" % (names1[cls1], names2[cls2], conf2),
+                             "scores": {"class_score": conf2},
+                             "domain": "pixel"} for *xyxy, conf1, cls1, conf2, cls2 in pred.tolist()]
+                boxes = {"predictions": {"box_data": box_data, "class_labels": names2}}  # inference-space
                 wandb_images.append(wandb.Image(img[si], boxes=boxes, caption=path.name))
 
             # Append to pycocotools JSON dictionary
-            if save_json:
+            if save_json:  # todo ~
                 # [{"image_id": 42, "category_id": 18, "bbox": [258.15, 41.29, 348.26, 243.78], "score": 0.236}, ...
                 image_id = int(path.stem) if path.stem.isnumeric() else path.stem
                 box = xyxy2xywh(predn[:, :4])  # xywh
@@ -169,66 +190,108 @@ def test(data,
                                   'score': round(p[4], 5)})
 
             # Assign all predictions as incorrect
-            correct = torch.zeros(pred.shape[0], niou, dtype=torch.bool, device=device)
+            correct1 = torch.zeros(pred.shape[0], niou, dtype=torch.bool, device=device)
+            correct2 = torch.zeros(pred.shape[0], niou, dtype=torch.bool, device=device)  # edit
             if nl:
                 detected = []  # target indices
-                tcls_tensor = labels[:, 0]
+                tcls_tensor_1 = labels[:, 0]
+                tcls_tensor_2 = labels[:, 1]  # edit
 
                 # target boxes
-                tbox = xywh2xyxy(labels[:, 1:5])
+                tbox = xywh2xyxy(labels[:, 2:6])  # edit
                 scale_coords(img[si].shape[1:], tbox, shapes[si][0], shapes[si][1])  # native-space labels
                 if plots:
-                    confusion_matrix.process_batch(predn, torch.cat((labels[:, 0:1], tbox), 1))
+                    confusion_matrix1.process_batch(predn, torch.cat((labels[:, 0:1], tbox), 1))  # edit
+                    confusion_matrix2.process_batch(predn, torch.cat((labels[:, 0:1], tbox), 1))  # edit
 
                 # Per target class
-                for cls in torch.unique(tcls_tensor):
-                    ti = (cls == tcls_tensor).nonzero(as_tuple=False).view(-1)  # prediction indices
-                    pi = (cls == pred[:, 5]).nonzero(as_tuple=False).view(-1)  # target indices
+                unique_classes = torch.unique(torch.stack((tcls_tensor_1, tcls_tensor_2)), dim=1).T
+                # print("unique_classes", unique_classes.shape, unique_classes)   # todo
+                # print("tcls tensors", tcls_tensor_1, tcls_tensor_2)  # todo
+                for cls1, cls2 in unique_classes:
+                    ti1 = (cls1 == tcls_tensor_1).nonzero(as_tuple=False).view(-1)  # prediction indices
+                    pi1 = (cls1 == pred[:, 5]).nonzero(as_tuple=False).view(-1)  # target indices
+                    ti2 = (cls2 == tcls_tensor_2).nonzero(as_tuple=False).view(-1)  # prediction indices  #edit
+                    pi2 = (cls2 == pred[:, 7]).nonzero(as_tuple=False).view(-1)  # target indices  #edit
+                    # print("ti/pi", ti1, pi1, ti2, pi2)  # todo
 
                     # Search for detections
-                    if pi.shape[0]:
+                    if pi1.shape[0]:
                         # Prediction to target ious
-                        ious, i = box_iou(predn[pi, :4], tbox[ti]).max(1)  # best ious, indices
+                        ious, i = box_iou(predn[pi1, :4], tbox[ti1]).max(1)  # best ious, indices
 
                         # Append detections
                         detected_set = set()
                         for j in (ious > iouv[0]).nonzero(as_tuple=False):
-                            d = ti[i[j]]  # detected target
+                            d = ti1[i[j]]  # detected target
                             if d.item() not in detected_set:
                                 detected_set.add(d.item())
                                 detected.append(d)
-                                correct[pi[j]] = ious[j] > iouv  # iou_thres is 1xn
+                                correct1[pi1[j]] = ious[j] > iouv  # iou_thres is 1xn
+                                if len(detected) == nl:  # all targets already located in image
+                                    break
+                    if pi2.shape[0]:  # edit
+                        # Prediction to target ious
+                        ious, i = box_iou(predn[pi2, :4], tbox[ti2]).max(1)  # best ious, indices
+
+                        # Append detections
+                        detected_set = set()
+                        for j in (ious > iouv[0]).nonzero(as_tuple=False):
+                            d = ti2[i[j]]  # detected target
+                            if d.item() not in detected_set:
+                                detected_set.add(d.item())
+                                detected.append(d)
+                                correct2[pi2[j]] = ious[j] > iouv  # iou_thres is 1xn
                                 if len(detected) == nl:  # all targets already located in image
                                     break
 
-            # Append statistics (correct, conf, pcls, tcls)
-            stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
+            # Append statistics (correct, conf, predicted class, target class)
+            stats1.append((correct1.cpu(), pred[:, 4].cpu(), pred[:, 6].cpu(), tcls1))
+            stats2.append((correct2.cpu(), pred[:, 5].cpu(), pred[:, 7].cpu(), tcls2))  # edit
 
         # Plot images
         if plots and batch_i < 3:
             f = save_dir / f'test_batch{batch_i}_labels.jpg'  # labels
-            Thread(target=plot_images, args=(img, targets, paths, f, names), daemon=True).start()
+            Thread(target=plot_images, args=(img, targets, paths, f, names1, names2), daemon=True).start()  # edit
             f = save_dir / f'test_batch{batch_i}_pred.jpg'  # predictions
-            Thread(target=plot_images, args=(img, output_to_target(output), paths, f, names), daemon=True).start()
+            Thread(target=plot_images, args=(img, output_to_target(output), paths, f, names1, names2), daemon=True).start()  # edit
 
     # Compute statistics
-    stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
-    if len(stats) and stats[0].any():
-        p, r, ap, f1, ap_class = ap_per_class(*stats, plot=plots, save_dir=save_dir, names=names)
-        ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
-        mp, mr, map50, map = p.mean(), r.mean(), ap50.mean(), ap.mean()
-        nt = np.bincount(stats[3].astype(np.int64), minlength=nc)  # number of targets per class
+    stats1 = [np.concatenate(x, 0) for x in zip(*stats1)]  # to numpy
+    stats2 = [np.concatenate(x, 0) for x in zip(*stats2)]  # to numpy  # edit
+
+    # s1 = [np.count_nonzero(ba) for ba in stats1[0]]  # todo
+    # s2 = [np.count_nonzero(ba) for ba in stats2[0]]  # todo
+    # print("stats 1:", np.sum(s1), stats1[1:])  # todo
+    # print("stats 2:", np.sum(s2), stats2[1:])  # todo
+
+    if len(stats1) and stats1[0].any():
+        p_1, r_1, ap_1, f1_1, ap_class_1 = ap_per_class(*stats1, plot=plots, save_dir=save_dir, names=names1, suffix='_1')
+        ap50_1, ap_1 = ap_1[:, 0], ap_1.mean(1)  # AP@0.5, AP@0.5:0.95
+        mp_1, mr_1, map50_1, map_1 = p_1.mean(), r_1.mean(), ap50_1.mean(), ap_1.mean()
+        nt_1 = np.bincount(stats1[3].astype(np.int64), minlength=nc1)  # number of targets per class
     else:
-        nt = torch.zeros(1)
+        nt_1 = torch.zeros(1)
+    if len(stats2) and stats2[0].any():
+        p_2, r_2, ap_2, f1_2, ap_class_2 = ap_per_class(*stats2, plot=plots, save_dir=save_dir, names=names2, suffix='_2')  # edit
+        ap50_2, ap_2 = ap_2[:, 0], ap_2.mean(1)  # AP@0.5, AP@0.5:0.95  # edit
+        mp_2, mr_2, map50_2, map_2 = p_2.mean(), r_2.mean(), ap50_2.mean(), ap_2.mean()  # edit
+        nt_2 = np.bincount(stats2[3].astype(np.int64), minlength=nc2)  # number of targets per class  # edit
+    else:
+        nt_2 = torch.zeros(1)  # edit
 
     # Print results
     pf = '%20s' + '%12.3g' * 6  # print format
-    print(pf % ('all', seen, nt.sum(), mp, mr, map50, map))
+    print(pf % ('all_1', seen, nt_1.sum(), mp_1, mr_1, map50_1, map_1))
+    print(pf % ('all_2', seen, nt_2.sum(), mp_2, mr_2, map50_2, map_2))  # edit
 
     # Print results per class
-    if (verbose or (nc < 50 and not training)) and nc > 1 and len(stats):
-        for i, c in enumerate(ap_class):
-            print(pf % (names[c], seen, nt[c], p[i], r[i], ap50[i], ap[i]))
+    if (verbose or (nc1 < 50 and not training)) and nc1 > 1 and len(stats1):
+        for i, c in enumerate(ap_class_1):
+            print(pf % (names1[c], seen, nt_1[c], p_1[i], r_1[i], ap50_1[i], ap_1[i]))
+    if (verbose or (nc2 < 50 and not training)) and nc2 > 1 and len(stats2):  # edit
+        for i, c in enumerate(ap_class_2):
+            print(pf % (names2[c], seen, nt_2[c], p_2[i], r_2[i], ap50_2[i], ap_2[i]))
 
     # Print speeds
     t = tuple(x / seen * 1E3 for x in (t0, t1, t0 + t1)) + (imgsz, imgsz, batch_size)  # tuple
@@ -237,13 +300,14 @@ def test(data,
 
     # Plots
     if plots:
-        confusion_matrix.plot(save_dir=save_dir, names=list(names.values()))
+        confusion_matrix1.plot(save_dir=save_dir, names=list(names1.values()), suffix='_1')
+        confusion_matrix2.plot(save_dir=save_dir, names=list(names2.values()), suffix='_2')  # edit
         if wandb and wandb.run:
             val_batches = [wandb.Image(str(f), caption=f.name) for f in sorted(save_dir.glob('test*.jpg'))]
             wandb.log({"Images": wandb_images, "Validation": val_batches}, commit=False)
 
     # Save JSON
-    if save_json and len(jdict):
+    if save_json and len(jdict):  # todo ~
         w = Path(weights[0] if isinstance(weights, list) else weights).stem if weights is not None else ''  # weights
         anno_json = '../coco/annotations/instances_val2017.json'  # annotations json
         pred_json = str(save_dir / f"{w}_predictions.json")  # predictions json
@@ -272,10 +336,16 @@ def test(data,
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
         print(f"Results saved to {save_dir}{s}")
     model.float()  # for training
-    maps = np.zeros(nc) + map
-    for i, c in enumerate(ap_class):
-        maps[c] = ap[i]
-    return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t
+    maps_1 = np.zeros(nc1) + map_1
+    for i, c in enumerate(ap_class_1):
+        maps_1[c] = ap_1[i]
+    maps_2 = np.zeros(nc2) + map_2
+    for i, c in enumerate(ap_class_2):
+        maps_2[c] = ap_2[i]
+    res_loss = (loss.cpu() / len(dataloader)).tolist()
+    return maps_1, maps_2, t,\
+        (mp_1, mr_1, map50_1, map_1, *res_loss),\
+        (mp_2, mr_2, map50_2, map_2, *res_loss)
 
 
 """
@@ -328,16 +398,16 @@ if __name__ == '__main__':
         for w in opt.weights:
             test(opt.data, w, opt.batch_size, opt.img_size, 0.25, 0.45, save_json=False, plots=False)
 
-    elif opt.task == 'study':  # run over a range of settings and save/plot
+    elif opt.task == 'study':  # run over a range of settings and save/plot  # todo ~
         x = list(range(256, 1536 + 128, 128))  # x axis (image sizes)
         for w in opt.weights:
             f = f'study_{Path(opt.data).stem}_{Path(w).stem}.txt'  # filename to save to
             y = []  # y axis
             for i in x:  # img-size
                 print(f'\nRunning {f} point {i}...')
-                r, _, t = test(opt.data, w, opt.batch_size, i, opt.conf_thres, opt.iou_thres, opt.save_json,
+                _, _, t, r1, r2 = test(opt.data, w, opt.batch_size, i, opt.conf_thres, opt.iou_thres, opt.save_json,
                                plots=False)
-                y.append(r + t)  # results and times
+                y.append(r1 + r2 + t)  # results and times
             np.savetxt(f, y, fmt='%10.4g')  # save
         os.system('zip -r study.zip study_*.txt')
         plot_study_txt(x=x)  # plot

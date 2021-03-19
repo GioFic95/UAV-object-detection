@@ -108,13 +108,14 @@ class ComputeLoss:
         self.balance = {3: [3.67, 1.0, 0.43], 4: [4.0, 1.0, 0.25, 0.06], 5: [4.0, 1.0, 0.25, 0.06, .02]}[det.nl]
         self.ssi = (det.stride == 16).nonzero(as_tuple=False).item()  # stride 16 index
         self.BCEcls, self.BCEobj, self.gr, self.hyp, self.autobalance = BCEcls, BCEobj, model.gr, h, autobalance
-        for k in 'na', 'nc', 'nl', 'anchors':
+        for k in 'na', 'nc1', 'nc2', 'nl', 'anchors':
             setattr(self, k, getattr(det, k))
 
     def __call__(self, p, targets):  # predictions, targets, model
         device = targets.device
-        lcls, lbox, lobj = torch.zeros(1, device=device), torch.zeros(1, device=device), torch.zeros(1, device=device)
-        tcls, tbox, indices, anchors = self.build_targets(p, targets)  # targets
+        lcls1, lcls2, lbox, lobj = torch.zeros(1, device=device), torch.zeros(1, device=device),\
+                                   torch.zeros(1, device=device), torch.zeros(1, device=device)
+        tcls1, tcls2, tbox, indices, anchors = self.build_targets(p, targets)  # targets
 
         # Losses
         for i, pi in enumerate(p):  # layer index, layer predictions
@@ -136,10 +137,14 @@ class ComputeLoss:
                 tobj[b, a, gj, gi] = (1.0 - self.gr) + self.gr * iou.detach().clamp(0).type(tobj.dtype)  # iou ratio
 
                 # Classification
-                if self.nc > 1:  # cls loss (only if multiple classes)
-                    t = torch.full_like(ps[:, 5:], self.cn, device=device)  # targets
-                    t[range(n), tcls[i]] = self.cp
-                    lcls += self.BCEcls(ps[:, 5:], t)  # BCE
+                if self.nc1 > 1 or self.nc2 > 1:  # cls loss (only if multiple classes)  # edit
+                    # print(f"n: {n}, ps: {ps.shape}, tcls1: {tcls1}, tcls2: {tcls2}, lcls1: {lcls1}, lcls2: {lcls2}")  # todo
+                    t1 = torch.full_like(ps[:, 5:5+self.nc1], self.cn, device=device)  # targets
+                    t1[range(n), tcls1[i]] = self.cp
+                    lcls1 += self.BCEcls(ps[:, 5:5+self.nc1], t1)  # BCE
+                    t2 = torch.full_like(ps[:, 5+self.nc1:], self.cn, device=device)  # targets
+                    t2[range(n), tcls2[i]] = self.cp
+                    lcls2 += self.BCEcls(ps[:, 5+self.nc1:], t2)  # BCE
 
                 # Append targets to text file
                 # with open('targets.txt', 'a') as file:
@@ -154,17 +159,18 @@ class ComputeLoss:
             self.balance = [x / self.balance[self.ssi] for x in self.balance]
         lbox *= self.hyp['box']
         lobj *= self.hyp['obj']
-        lcls *= self.hyp['cls']
+        lcls1 *= self.hyp['cls']  # edit
+        lcls2 *= self.hyp['cls']  # edit
         bs = tobj.shape[0]  # batch size
 
-        loss = lbox + lobj + lcls
-        return loss * bs, torch.cat((lbox, lobj, lcls, loss)).detach()
+        loss = lbox + lobj + lcls1 + lcls2  # edit
+        return loss * bs, torch.cat((lbox, lobj, lcls1, lcls2, loss)).detach()  # edit
 
     def build_targets(self, p, targets):
         # Build targets for compute_loss(), input targets(image,class,x,y,w,h)
         na, nt = self.na, targets.shape[0]  # number of anchors, targets
-        tcls, tbox, indices, anch = [], [], [], []
-        gain = torch.ones(7, device=targets.device)  # normalized to gridspace gain
+        tcls1, tcls2, tbox, indices, anch = [], [], [], [], []  # edit
+        gain = torch.ones(8, device=targets.device)  # normalized to gridspace gain  # edit
         ai = torch.arange(na, device=targets.device).float().view(na, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
         targets = torch.cat((targets.repeat(na, 1, 1), ai[:, :, None]), 2)  # append anchor indices
 
@@ -176,20 +182,20 @@ class ComputeLoss:
 
         for i in range(self.nl):
             anchors = self.anchors[i]
-            gain[2:6] = torch.tensor(p[i].shape)[[3, 2, 3, 2]]  # xyxy gain
+            gain[3:7] = torch.tensor(p[i].shape)[[3, 2, 3, 2]]  # xyxy gain  # edit
 
             # Match targets to anchors
             t = targets * gain
             if nt:
                 # Matches
-                r = t[:, :, 4:6] / anchors[:, None]  # wh ratio
+                r = t[:, :, 5:7] / anchors[:, None]  # wh ratio  # edit
                 j = torch.max(r, 1. / r).max(2)[0] < self.hyp['anchor_t']  # compare
                 # j = wh_iou(anchors, t[:, 4:6]) > model.hyp['iou_t']  # iou(3,n)=wh_iou(anchors(3,2), gwh(n,2))
                 t = t[j]  # filter
 
                 # Offsets
-                gxy = t[:, 2:4]  # grid xy
-                gxi = gain[[2, 3]] - gxy  # inverse
+                gxy = t[:, 3:5]  # grid xy  # edit
+                gxi = gain[[3, 4]] - gxy  # inverse  # edit
                 j, k = ((gxy % 1. < g) & (gxy > 1.)).T
                 l, m = ((gxi % 1. < g) & (gxi > 1.)).T
                 j = torch.stack((torch.ones_like(j), j, k, l, m))
@@ -200,17 +206,18 @@ class ComputeLoss:
                 offsets = 0
 
             # Define
-            b, c = t[:, :2].long().T  # image, class
-            gxy = t[:, 2:4]  # grid xy
-            gwh = t[:, 4:6]  # grid wh
+            b, c1, c2 = t[:, :3].long().T  # image, class shape, class char  # edit
+            gxy = t[:, 3:5]  # grid xy  # edit
+            gwh = t[:, 5:7]  # grid wh  # edit
             gij = (gxy - offsets).long()
             gi, gj = gij.T  # grid xy indices
 
             # Append
-            a = t[:, 6].long()  # anchor indices
+            a = t[:, 7].long()  # anchor indices  # edit
             indices.append((b, a, gj.clamp_(0, gain[3] - 1), gi.clamp_(0, gain[2] - 1)))  # image, anchor, grid indices
             tbox.append(torch.cat((gxy - gij, gwh), 1))  # box
             anch.append(anchors[a])  # anchors
-            tcls.append(c)  # class
+            tcls1.append(c1)  # class shape  # edit
+            tcls2.append(c2)  # class char  # edit
 
-        return tcls, tbox, indices, anch
+        return tcls1, tcls2, tbox, indices, anch  # edit

@@ -166,23 +166,28 @@ def colorstr(*input):
     return ''.join(colors[x] for x in args) + f'{string}' + colors['end']
 
 
-def labels_to_class_weights(labels, nc=80):
+def labels_to_class_weights(labels, nc1=80, nc2=80):  # edit
     # Get class weights (inverse frequency) from training labels
-    if labels[0] is None:  # no labels loaded
+    if labels[0] is None or labels[1] is None:  # no labels loaded  # edit
         return torch.Tensor()
 
     labels = np.concatenate(labels, 0)  # labels.shape = (866643, 5) for COCO
-    classes = labels[:, 0].astype(np.int)  # labels = [class xywh]
-    weights = np.bincount(classes, minlength=nc)  # occurrences per class
+    classes1 = labels[:, 0].astype(np.int)  # labels = [class xywh]  # edit
+    classes2 = labels[:, 1].astype(np.int)  # labels = [class xywh]  # edit
+    weights1 = np.bincount(classes1, minlength=nc1)  # occurrences per class  # edit
+    weights2 = np.bincount(classes2, minlength=nc2)  # occurrences per class  # edit
 
     # Prepend gridpoint count (for uCE training)
     # gpi = ((320 / 32 * np.array([1, 2, 4])) ** 2 * 3).sum()  # gridpoints per image
     # weights = np.hstack([gpi * len(labels)  - weights.sum() * 9, weights * 9]) ** 0.5  # prepend gridpoints to start
 
-    weights[weights == 0] = 1  # replace empty bins with 1
-    weights = 1 / weights  # number of targets per class
-    weights /= weights.sum()  # normalize
-    return torch.from_numpy(weights)
+    weights1[weights1 == 0] = 1  # replace empty bins with 1  # edit
+    weights1 = 1 / weights1  # number of targets per class  # edit
+    weights1 /= weights1.sum()  # normalize  # edit
+    weights2[weights2 == 0] = 1  # replace empty bins with 1  # edit
+    weights2 = 1 / weights2  # number of targets per class  # edit
+    weights2 /= weights2.sum()  # normalize  # edit
+    return torch.from_numpy(weights1), torch.from_numpy(weights2)
 
 
 def labels_to_image_weights(labels, nc=80, class_weights=np.ones(80)):
@@ -337,11 +342,11 @@ def wh_iou(wh1, wh2):
     return inter / (wh1.prod(2) + wh2.prod(2) - inter)  # iou = inter / (area1 + area2 - inter)
 
 
-def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, labels=()):
+def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=None, agnostic=False, labels=(), nc1=None, nc2=None):
     """Performs Non-Maximum Suppression (NMS) on inference results
 
     Returns:
-         detections with shape: nx6 (x1, y1, x2, y2, conf, cls)
+         detections with shape: nx8 (x1, y1, x2, y2, conf1, cls1, conf2, cls2)  # edit
     """
 
     nc = prediction.shape[2] - 5  # number of classes
@@ -357,8 +362,10 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
     merge = False  # use merge-NMS
 
     t = time.time()
-    output = [torch.zeros((0, 6), device=prediction.device)] * prediction.shape[0]
+    output = [torch.zeros((0, 8), device=prediction.device)] * prediction.shape[0]  # edit
     for xi, x in enumerate(prediction):  # image index, image inference
+        # x = center x, center y, width, height, obj_conf, (cls_conf for each class)
+
         # Apply constraints
         # x[((x[..., 2:4] < min_wh) | (x[..., 2:4] > max_wh)).any(1), 4] = 0  # width-height
         x = x[xc[xi]]  # confidence
@@ -366,6 +373,7 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         # Cat apriori labels if autolabelling
         if labels and len(labels[xi]):
             l = labels[xi]
+            # print("labels 376:", l)  # todo
             v = torch.zeros((len(l), nc + 5), device=x.device)
             v[:, :4] = l[:, 1:5]  # box
             v[:, 4] = 1.0  # conf
@@ -377,22 +385,45 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
             continue
 
         # Compute conf
-        x[:, 5:] *= x[:, 4:5]  # conf = obj_conf * cls_conf
+        x[:, 5:] *= x[:, 4:5]  # conf = obj_conf * cls_conf (for each class in cls1 and cls2)
+        # print(xi, "x 389:", x.shape)  # todo
 
         # Box (center x, center y, width, height) to (x1, y1, x2, y2)
         box = xywh2xyxy(x[:, :4])
+        # print(xi, "box:", box.shape)  # todo
 
-        # Detections matrix nx6 (xyxy, conf, cls)
-        if multi_label:
-            i, j = (x[:, 5:] > conf_thres).nonzero(as_tuple=False).T
-            x = torch.cat((box[i], x[i, j + 5, None], j[:, None].float()), 1)
-        else:  # best class only
+        # Detections matrix nx8 (xyxy, conf1, cls1, conf2, cls2)  #edit
+        if multi_label:  # edit
+            # rows and columns with conf > thres, col = class
+            i1, j1 = (x[:, 5:5+nc1] > conf_thres).nonzero(as_tuple=False).T
+            i2, j2 = (x[:, 5+nc1:] > conf_thres).nonzero(as_tuple=False).T
+            z = []
+            for ind in np.intersect1d(i1.cpu(), i2.cpu()):
+                a = j1[i1 == ind]
+                b = j2[i2 == ind]
+                c = torch.cartesian_prod(a, b)
+                d = torch.full((c.shape[0], 1), ind, device=torch.cuda.current_device())
+                z += [torch.cat((d, c), -1)]
+                del a, b, c, d
+            if z:
+                z = torch.cat(z)
+                x_box = box[z[:, 0]]
+                x_conf1 = x[z[:, 0], z[:, 1]+5, None]
+                x_cls1 = z[:, 1, None].float()
+                x_conf2 = x[z[:, 0], z[:, 2]+5+nc1, None]
+                x_cls2 = z[:, 2, None].float()
+                x = torch.cat((x_box, x_conf1, x_cls1, x_conf2, x_cls2), 1)
+                del z
+            else:
+                x = torch.empty((0, 8))
+            # print("x 416:", x.shape)  # todo
+        else:  # best class only # todo ~
             conf, j = x[:, 5:].max(1, keepdim=True)
             x = torch.cat((box, conf, j.float()), 1)[conf.view(-1) > conf_thres]
 
         # Filter by class
         if classes is not None:
-            x = x[(x[:, 5:6] == torch.tensor(classes, device=x.device)).any(1)]
+            x = x[(x[:, 5:6] == torch.tensor(classes, device=x.device)).any(1)]  # todo ~
 
         # Apply finite constraint
         # if not torch.isfinite(x).all():
@@ -403,11 +434,13 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         if not n:  # no boxes
             continue
         elif n > max_nms:  # excess boxes
-            x = x[x[:, 4].argsort(descending=True)[:max_nms]]  # sort by confidence
+            x = x[(x[:, 4] + x[:, 6]).argsort(descending=True)[:max_nms]]  # sort by confidence  # edit
+            # print("x 435:", x.shape)  # todo
 
-        # Batched NMS
-        c = x[:, 5:6] * (0 if agnostic else max_wh)  # classes
-        boxes, scores = x[:, :4] + c, x[:, 4]  # boxes (offset by class), scores
+        # Batched NMS  # todo ???
+        c1 = x[:, 5:6] * (0 if agnostic else max_wh)  # classes  # edit
+        c2 = x[:, 7:8] * (0 if agnostic else max_wh)  # classes  # edit
+        boxes, scores = x[:, :4] + c1 + c2, x[:, 4] + x[:, 6]  # boxes (offset by class), scores  # edit
         i = torchvision.ops.nms(boxes, scores, iou_thres)  # NMS
         if i.shape[0] > max_det:  # limit detections
             i = i[:max_det]
@@ -424,6 +457,8 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
             print(f'WARNING: NMS time limit {time_limit}s exceeded')
             break  # time limit exceeded
 
+    # print("NMS output:", output)  # todo
+    # output: [box, conf1, cls1, conf2, cls2]
     return output
 
 

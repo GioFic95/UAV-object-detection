@@ -54,18 +54,39 @@ def butter_lowpass_filtfilt(data, cutoff=1500, fs=50000, order=5):
     return filtfilt(b, a, data)  # forward-backward filter
 
 
-def plot_one_box(x, img, color=None, label=None, line_thickness=None):
+def plot_one_box(x, img, color=None, label1="", label2="", line_thickness=None):
     # Plots one bounding box on image img
     tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1  # line/font thickness
     color = color or [random.randint(0, 255) for _ in range(3)]
     c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
+    tf = max(tl - 1, 1)  # font thickness
     cv2.rectangle(img, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
-    if label:
-        tf = max(tl - 1, 1)  # font thickness
-        t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
-        c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
-        cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)  # filled
-        cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+    if label1 and label2:  # edit
+        label = f"{label1};{label2}"  # edit
+    else:
+        label = f"{label1}{label2}"  # edit
+    t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
+    c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
+    cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)  # filled
+    cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+
+    # t_size_1 = (0, 0)
+    # t_size_2 = (0, 0)  # edit
+    # if label1:
+    #     tf = max(tl - 1, 1)  # font thickness
+    #     t_size_1 = cv2.getTextSize(label1, 0, fontScale=tl / 3, thickness=tf)[0]
+    #     c2 = c1[0] + t_size_1[0], c1[1] - t_size_1[1] - 3
+    #     cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)  # filled
+    #     cv2.putText(img, label1, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+    # if label2:  # edit
+    #     if label1:
+    #         label2 = f";{label2}"
+    #     tf = max(tl - 1, 1)  # font thickness
+    #     t_size_2 = cv2.getTextSize(label2, 0, fontScale=tl / 3, thickness=tf)[0]
+    #     c2 = c1[0] + t_size_2[0], c1[1] - t_size_2[1] - 3
+    #     cv2.rectangle(img, (c1[0] + t_size_1[0], c1[1]), (c2[0] + t_size_1[0], c2[1]), color, -1, cv2.LINE_AA)  # filled
+    #     cv2.putText(img, label2, (c1[0] + t_size_1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255],
+    #                 thickness=tf, lineType=cv2.LINE_AA)
 
 
 def plot_wh_methods():  # from utils.plots import *; plot_wh_methods()
@@ -89,15 +110,16 @@ def plot_wh_methods():  # from utils.plots import *; plot_wh_methods()
 
 
 def output_to_target(output):
-    # Convert model output to target format [batch_id, class_id, x, y, w, h, conf]
+    # Convert model output to target format [batch_id, class_id_1, class_id_2, x, y, w, h, conf_1, conf_2]
     targets = []
-    for i, o in enumerate(output):
-        for *box, conf, cls in o.cpu().numpy():
-            targets.append([i, cls, *list(*xyxy2xywh(np.array(box)[None])), conf])
+    for i, o in enumerate(output):  # output: xyxy, conf1, cls1, conf2, cls2  # edit
+        for *box, conf1, cls1, conf2, cls2 in o.cpu().numpy():  # edit
+            targets.append([i, cls1, cls2, *list(*xyxy2xywh(np.array(box)[None])), conf1, conf2])  # edit
     return np.array(targets)
 
 
-def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max_size=640, max_subplots=16):
+def plot_images(images, targets, paths=None, fname='images.jpg', names1=None, names2=None,
+                max_size=640, max_subplots=16):  # edit
     # Plot image grid with labels
 
     if isinstance(images, torch.Tensor):
@@ -136,11 +158,15 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max
 
         mosaic[block_y:block_y + h, block_x:block_x + w, :] = img
         if len(targets) > 0:
+            # targets (labels): batch_id, cls1, cls2, xywh  # edit
+            # targets (predictions): batch_id, class_id_1, class_id_2, x, y, w, h, conf_1, conf_2  # edit
             image_targets = targets[targets[:, 0] == i]
-            boxes = xywh2xyxy(image_targets[:, 2:6]).T
-            classes = image_targets[:, 1].astype('int')
-            labels = image_targets.shape[1] == 6  # labels if no conf column
-            conf = None if labels else image_targets[:, 6]  # check for confidence presence (label vs pred)
+            boxes = xywh2xyxy(image_targets[:, 3:7]).T  # edit
+            classes1 = image_targets[:, 1].astype('int')  # edit
+            classes2 = image_targets[:, 2].astype('int')  # edit
+            labels = image_targets.shape[1] == 7  # labels if no conf column  # edit
+            conf1 = None if labels else image_targets[:, 7]  # check for confidence presence (label vs pred)  # edit
+            conf2 = None if labels else image_targets[:, 8]  # edit
 
             if boxes.shape[1]:
                 if boxes.max() <= 1.01:  # if normalized with tolerance 0.01
@@ -151,12 +177,15 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max
             boxes[[0, 2]] += block_x
             boxes[[1, 3]] += block_y
             for j, box in enumerate(boxes.T):
-                cls = int(classes[j])
-                color = colors[cls % len(colors)]
-                cls = names[cls] if names else cls
-                if labels or conf[j] > 0.25:  # 0.25 conf thresh
-                    label = '%s' % cls if labels else '%s %.1f' % (cls, conf[j])
-                    plot_one_box(box, mosaic, label=label, color=color, line_thickness=tl)
+                cls1 = int(classes1[j])
+                color = colors[cls1 % len(colors)]
+                cls1 = names1[cls1] if names1 else cls1
+                cls2 = int(classes2[j])  # edit
+                cls2 = names2[cls2] if names2 else cls2  # edit
+                if labels or (conf1[j] > 0.25 and conf2[j] > 0.25):  # 0.25 conf thresh
+                    label1 = '%s' % cls1 if labels else '%s %.1f' % (cls1, conf1[j])
+                    label2 = '%s' % cls2 if labels else '%s %.1f' % (cls2, conf2[j])  # edit
+                    plot_one_box(box, mosaic, label1=label1, label2=label2, color=color, line_thickness=tl)  # edit
 
         # Draw image filename labels
         if paths:
@@ -255,32 +284,32 @@ def plot_study_txt(path='', x=None):  # from utils.plots import *; plot_study_tx
     plt.savefig(str(Path(path).name) + '.png', dpi=300)
 
 
-def plot_labels(labels, save_dir=Path(''), loggers=None):
+def plot_labels(classes, boxes, save_dir=Path(''), loggers=None, suffix=''):
     # plot dataset labels
-    print('Plotting labels... ')
-    c, b = labels[:, 0], labels[:, 1:].transpose()  # classes, boxes
-    nc = int(c.max() + 1)  # number of classes
+    print(f'Plotting labels{suffix}... ')
+    nc = int(classes.max() + 1)  # number of classes
     colors = color_list()
-    x = pd.DataFrame(b.transpose(), columns=['x', 'y', 'width', 'height'])
+    x = pd.DataFrame(boxes, columns=['x', 'y', 'width', 'height'])
 
     # seaborn correlogram
     sns.pairplot(x, corner=True, diag_kind='auto', kind='hist', diag_kws=dict(bins=50), plot_kws=dict(pmax=0.9))
-    plt.savefig(save_dir / 'labels_correlogram.jpg', dpi=200)
+    plt.savefig(save_dir / f'labels_correlogram{suffix}.jpg', dpi=200)
     plt.close()
 
     # matplotlib labels
     matplotlib.use('svg')  # faster
     ax = plt.subplots(2, 2, figsize=(8, 8), tight_layout=True)[1].ravel()
-    ax[0].hist(c, bins=np.linspace(0, nc, nc + 1) - 0.5, rwidth=0.8)
-    ax[0].set_xlabel('classes')
+    ax[0].hist(classes, bins=np.linspace(0, nc, nc + 1) - 0.5, rwidth=0.8)
+    ax[0].set_xlabel(f'classes{suffix}')
     sns.histplot(x, x='x', y='y', ax=ax[2], bins=50, pmax=0.9)
     sns.histplot(x, x='width', y='height', ax=ax[3], bins=50, pmax=0.9)
 
     # rectangles
-    labels[:, 1:3] = 0.5  # center
-    labels[:, 1:] = xywh2xyxy(labels[:, 1:]) * 2000
+    boxes[:, 0:2] = 0.5  # center
+    boxes = xywh2xyxy(boxes) * 2000
     img = Image.fromarray(np.ones((2000, 2000, 3), dtype=np.uint8) * 255)
-    for cls, *box in labels[:1000]:
+    for i, box in enumerate(boxes[:1000]):
+        cls = classes[i]
         ImageDraw.Draw(img).rectangle(box, width=1, outline=colors[int(cls) % 10])  # plot
     ax[1].imshow(img)
     ax[1].axis('off')
@@ -289,14 +318,14 @@ def plot_labels(labels, save_dir=Path(''), loggers=None):
         for s in ['top', 'right', 'left', 'bottom']:
             ax[a].spines[s].set_visible(False)
 
-    plt.savefig(save_dir / 'labels.jpg', dpi=200)
+    plt.savefig(save_dir / f'labels{suffix}.jpg', dpi=200)
     matplotlib.use('Agg')
     plt.close()
 
     # loggers
     for k, v in loggers.items() or {}:
         if k == 'wandb' and v:
-            v.log({"Labels": [v.Image(str(x), caption=x.name) for x in save_dir.glob('*labels*.jpg')]}, commit=False)
+            v.log({"Labels": [v.Image(str(x), caption=x.name) for x in save_dir.glob(f'*labels{suffix}*.jpg')]}, commit=False)
 
 
 def plot_evolution(yaml_file='data/hyp.finetune.yaml'):  # from utils.plots import *; plot_evolution()
@@ -355,7 +384,7 @@ def profile_idetection(start=0, stop=0, labels=(), save_dir=''):
     plt.savefig(Path(save_dir) / 'idetection_profile.png', dpi=200)
 
 
-def plot_results_overlay(start=0, stop=0):  # from utils.plots import *; plot_results_overlay()
+def plot_results_overlay(start=0, stop=0):  # from utils.plots import *; plot_results_overlay()  # todo ~
     # Plot training 'results*.txt', overlaying train and val losses
     s = ['train', 'train', 'train', 'Precision', 'mAP@0.5', 'val', 'val', 'val', 'Recall', 'mAP@0.5:0.95']  # legends
     t = ['Box', 'Objectness', 'Classification', 'P-R', 'mAP-F1']  # titles
@@ -378,12 +407,16 @@ def plot_results_overlay(start=0, stop=0):  # from utils.plots import *; plot_re
         fig.savefig(f.replace('.txt', '.png'), dpi=200)
 
 
-def plot_results(start=0, stop=0, bucket='', id=(), labels=(), save_dir=''):
+def plot_results(start=0, stop=0, bucket='', id=(), labels=(), save_dir=''):  # todo
     # Plot training 'results*.txt'. from utils.plots import *; plot_results(save_dir='runs/train/exp')
-    fig, ax = plt.subplots(2, 5, figsize=(12, 6), tight_layout=True)
+    # epoch/epochs, mem, train_loss(box, obj, cls1, cls2, loss), targets.shape[0], imgs.shape[-1]  # edit
+    # P_1, R_1, mAP@.5_1, mAP@.5-.95_1, P_2, R_2, mAP@.5_2, mAP@.5-.95_2, val_loss(box, obj, cls1, cls2)  # edit
+    fig, ax = plt.subplots(4, 4, figsize=(12, 12), tight_layout=True)  # edit
     ax = ax.ravel()
-    s = ['Box', 'Objectness', 'Classification', 'Precision', 'Recall',
-         'val Box', 'val Objectness', 'val Classification', 'mAP@0.5', 'mAP@0.5:0.95']
+    s = ['Box', 'Objectness', 'Classification_1', 'Classification_2',
+         'Precision_1', 'Precision_2', 'Recall_1', 'Recall_2',
+         'val Box', 'val Objectness', 'val Classification_1', 'val Classification_2',
+         'mAP@0.5_1', 'mAP@0.5_2', 'mAP@0.5:0.95_1', 'mAP@0.5:0.95_2']  # edit
     if bucket:
         # files = ['https://storage.googleapis.com/%s/results%g.txt' % (bucket, x) for x in id]
         files = ['results%g.txt' % x for x in id]
@@ -394,12 +427,15 @@ def plot_results(start=0, stop=0, bucket='', id=(), labels=(), save_dir=''):
     assert len(files), 'No results.txt files found in %s, nothing to plot.' % os.path.abspath(save_dir)
     for fi, f in enumerate(files):
         try:
-            results = np.loadtxt(f, usecols=[2, 3, 4, 8, 9, 12, 13, 14, 10, 11], ndmin=2).T
+            results = np.loadtxt(f, ndmin=2, usecols=[2, 3, 4, 5,
+                                                      9, 13, 10, 14,
+                                                      17, 18, 19, 20,
+                                                      11, 15, 12, 16],).T  # edit
             n = results.shape[1]  # number of rows
             x = range(start, min(stop, n) if stop else n)
-            for i in range(10):
+            for i in range(len(s)):
                 y = results[i, x]
-                if i in [0, 1, 2, 5, 6, 7]:
+                if i in [0, 1, 2, 3, 8, 9, 10, 11]:  # edit
                     y[y == 0] = np.nan  # don't show zero loss values
                     # y /= y[0]  # normalize
                 label = labels[fi] if len(labels) else f.stem

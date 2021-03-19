@@ -9,13 +9,15 @@ import torch
 from . import general
 
 
-def fitness(x):
+def fitness(*xi):
     # Model fitness as a weighted combination of metrics
+    n = len(xi)
+    np_xi = np.array(xi).reshape((n, len(xi[0][0])))
     w = [0.0, 0.0, 0.1, 0.9]  # weights for [P, R, mAP@0.5, mAP@0.5:0.95]
-    return (x[:, :4] * w).sum(1)
+    return (np.sum(np_xi[:, :4], 0) * w / n).sum()
 
 
-def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir='.', names=()):
+def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir='.', names=(), suffix=''):
     """ Compute the average precision, given the recall and precision curves.
     Source: https://github.com/rafaelpadilla/Object-Detection-Metrics.
     # Arguments
@@ -69,10 +71,10 @@ def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir='.', names
     # Compute F1 (harmonic mean of precision and recall)
     f1 = 2 * p * r / (p + r + 1e-16)
     if plot:
-        plot_pr_curve(px, py, ap, Path(save_dir) / 'PR_curve.png', names)
-        plot_mc_curve(px, f1, Path(save_dir) / 'F1_curve.png', names, ylabel='F1')
-        plot_mc_curve(px, p, Path(save_dir) / 'P_curve.png', names, ylabel='Precision')
-        plot_mc_curve(px, r, Path(save_dir) / 'R_curve.png', names, ylabel='Recall')
+        plot_pr_curve(px, py, ap, Path(save_dir) / f'PR_curve{suffix}.png', names)
+        plot_mc_curve(px, f1, Path(save_dir) / f'F1_curve{suffix}.png', names, ylabel='F1')
+        plot_mc_curve(px, p, Path(save_dir) / f'P_curve{suffix}.png', names, ylabel='Precision')
+        plot_mc_curve(px, r, Path(save_dir) / f'R_curve{suffix}.png', names, ylabel='Recall')
 
     i = f1.mean(0).argmax()  # max F1 index
     return p[:, i], r[:, i], ap, f1[:, i], unique_classes.astype('int32')
@@ -157,7 +159,7 @@ class ConfusionMatrix:
     def matrix(self):
         return self.matrix
 
-    def plot(self, save_dir='', names=()):
+    def plot(self, save_dir='', names=(), suffix=''):
         try:
             import seaborn as sn
 
@@ -172,7 +174,7 @@ class ConfusionMatrix:
                        yticklabels=names + ['background FP'] if labels else "auto").set_facecolor((1, 1, 1))
             fig.axes[0].set_xlabel('True')
             fig.axes[0].set_ylabel('Predicted')
-            fig.savefig(Path(save_dir) / 'confusion_matrix.png', dpi=250)
+            fig.savefig(Path(save_dir) / f'confusion_matrix{suffix}.png', dpi=250)
         except Exception as e:
             pass
 

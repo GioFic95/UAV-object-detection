@@ -24,10 +24,11 @@ class Detect(nn.Module):
     stride = None  # strides computed during build
     export = False  # onnx export
 
-    def __init__(self, nc=80, anchors=(), ch=()):  # detection layer
+    def __init__(self, nc1=80, nc2=80, anchors=(), ch=()):  # detection layer
         super(Detect, self).__init__()
-        self.nc = nc  # number of classes
-        self.no = nc + 5  # number of outputs per anchor
+        self.nc1 = nc1  # number of classes shapes  # edit
+        self.nc2 = nc2  # number of classes chars  # edit
+        self.no = nc1 + nc2 + 5  # number of outputs per anchor  # edit
         self.nl = len(anchors)  # number of detection layers
         self.na = len(anchors[0]) // 2  # number of anchors
         self.grid = [torch.zeros(1)] * self.nl  # init grid
@@ -63,7 +64,7 @@ class Detect(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, cfg='yolov5s.yaml', ch=3, nc=None):  # model, input channels, number of classes
+    def __init__(self, cfg='yolov5s.yaml', ch=3, nc1=None, nc2=None):  # model, input channels, number of classes
         super(Model, self).__init__()
         if isinstance(cfg, dict):
             self.yaml = cfg  # model dict
@@ -75,11 +76,15 @@ class Model(nn.Module):
 
         # Define model
         ch = self.yaml['ch'] = self.yaml.get('ch', ch)  # input channels
-        if nc and nc != self.yaml['nc']:
-            logger.info('Overriding model.yaml nc=%g with nc=%g' % (self.yaml['nc'], nc))
-            self.yaml['nc'] = nc  # override yaml value
+        if nc1 and nc1 != self.yaml['nc1']:  # edit
+            logger.info('Overriding model.yaml nc1=%g with nc1=%g' % (self.yaml['nc1'], nc1))  # edit
+            self.yaml['nc1'] = nc1  # override yaml value  # edit
+        if nc2 and nc2 != self.yaml['nc2']:  # edit
+            logger.info('Overriding model.yaml nc2=%g with nc2=%g' % (self.yaml['nc2'], nc2))  # edit
+            self.yaml['nc2'] = nc2  # override yaml value  # edit
         self.model, self.save = parse_model(deepcopy(self.yaml), ch=[ch])  # model, savelist
-        self.names = [str(i) for i in range(self.yaml['nc'])]  # default names
+        self.names1 = [str(i) for i in range(self.yaml['nc1'])]  # default names  # edit
+        self.names2 = [str(i) for i in range(self.yaml['nc2'])]  # default names  # edit
         # print([x.shape for x in self.forward(torch.zeros(1, ch, 64, 64))])
 
         # Build strides, anchors
@@ -145,8 +150,9 @@ class Model(nn.Module):
         m = self.model[-1]  # Detect() module
         for mi, s in zip(m.m, m.stride):  # from
             b = mi.bias.view(m.na, -1)  # conv.bias(255) to (3,85)
+            print("bias:", b.shape, b)  # todo
             b.data[:, 4] += math.log(8 / (640 / s) ** 2)  # obj (8 objects per 640 image)
-            b.data[:, 5:] += math.log(0.6 / (m.nc - 0.99)) if cf is None else torch.log(cf / cf.sum())  # cls
+            b.data[:, 5:] += math.log(0.6 / (m.nc1 - 0.99)) if cf is None else torch.log(cf / cf.sum())  # cls  # todo
             mi.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
 
     def _print_biases(self):
@@ -196,9 +202,9 @@ class Model(nn.Module):
 
 def parse_model(d, ch):  # model_dict, input_channels(3)
     logger.info('\n%3s%18s%3s%10s  %-40s%-30s' % ('', 'from', 'n', 'params', 'module', 'arguments'))
-    anchors, nc, gd, gw = d['anchors'], d['nc'], d['depth_multiple'], d['width_multiple']
+    anchors, nc1, nc2, gd, gw = d['anchors'], d['nc1'], d['nc2'], d['depth_multiple'], d['width_multiple']
     na = (len(anchors[0]) // 2) if isinstance(anchors, list) else anchors  # number of anchors
-    no = na * (nc + 5)  # number of outputs = anchors * (classes + 5)
+    no = na * (nc1 + nc2 + 5)  # number of outputs = anchors * (classes + 5)
 
     layers, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
     for i, (f, n, m, args) in enumerate(d['backbone'] + d['head']):  # from, number, module, args
@@ -242,8 +248,8 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
             c2 = sum([ch[x if x < 0 else x + 1] for x in f])
         elif m is Detect:
             args.append([ch[x + 1] for x in f])
-            if isinstance(args[1], int):  # number of anchors
-                args[1] = [list(range(args[1] * 2))] * len(f)
+            if isinstance(args[2], int):  # number of anchors  # edit
+                args[2] = [list(range(args[2] * 2))] * len(f)  # edit
         elif m is Contract:
             c2 = ch[f if f < 0 else f + 1] * args[0] ** 2
         elif m is Expand:

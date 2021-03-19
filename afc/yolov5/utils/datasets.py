@@ -388,7 +388,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
         # Read cache
         cache.pop('hash')  # remove hash
-        labels, shapes = zip(*cache.values())
+        labels, shapes = zip(*cache.values())  # labels: cls1, cls2, xyxy
         self.labels = list(labels)
         self.shapes = np.array(shapes, dtype=np.float64)
         self.img_files = list(cache.keys())  # update
@@ -460,16 +460,16 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                     with open(lb_file, 'r') as f:
                         l = np.array([x.split() for x in f.read().strip().splitlines()], dtype=np.float32)  # labels
                     if len(l):
-                        assert l.shape[1] == 5, 'labels require 5 columns each'
+                        assert l.shape[1] == 6, 'labels require 6 columns each'  # edit
                         assert (l >= 0).all(), 'negative labels'
-                        assert (l[:, 1:] <= 1).all(), 'non-normalized or out of bounds coordinate labels'
+                        assert (l[:, 2:] <= 1).all(), 'non-normalized or out of bounds coordinate labels'  # edit
                         assert np.unique(l, axis=0).shape[0] == l.shape[0], 'duplicate labels'
                     else:
                         ne += 1  # label empty
-                        l = np.zeros((0, 5), dtype=np.float32)
+                        l = np.zeros((0, 6), dtype=np.float32)  # edit
                 else:
                     nm += 1  # label missing
-                    l = np.zeros((0, 5), dtype=np.float32)
+                    l = np.zeros((0, 6), dtype=np.float32)  # edit
                 x[im_file] = [l, shape]
             except Exception as e:
                 nc += 1
@@ -485,7 +485,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         x['results'] = [nf, nm, ne, nc, i + 1]
         torch.save(x, path)  # save for next time
         logging.info(f'{prefix}New cache created: {path}')
-        return x
+        return x  # hash, results, name --> label (cls1, cls2, xyxy), shape  # edit
 
     def __len__(self):
         return len(self.img_files)
@@ -522,9 +522,9 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
             shapes = (h0, w0), ((h / h0, w / w0), pad)  # for COCO mAP rescaling
 
-            labels = self.labels[index].copy()
+            labels = self.labels[index].copy()  # cls1, cls2, xyxy  # edit
             if labels.size:  # normalized xywh to pixel xyxy format
-                labels[:, 1:] = xywhn2xyxy(labels[:, 1:], ratio[0] * w, ratio[1] * h, padw=pad[0], padh=pad[1])
+                labels[:, 2:] = xywhn2xyxy(labels[:, 2:], ratio[0] * w, ratio[1] * h, padw=pad[0], padh=pad[1])  # edit
 
         if self.augment:
             # Augment imagespace
@@ -545,24 +545,25 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
         nL = len(labels)  # number of labels
         if nL:
-            labels[:, 1:5] = xyxy2xywh(labels[:, 1:5])  # convert xyxy to xywh
-            labels[:, [2, 4]] /= img.shape[0]  # normalized height 0-1
-            labels[:, [1, 3]] /= img.shape[1]  # normalized width 0-1
+            labels[:, 2:6] = xyxy2xywh(labels[:, 2:6])  # convert xyxy to xywh  #  edit
+            labels[:, [3, 5]] /= img.shape[0]  # normalized height 0-1  #  edit
+            labels[:, [2, 4]] /= img.shape[1]  # normalized width 0-1  #  edit
 
         if self.augment:
             # flip up-down
             if random.random() < hyp['flipud']:
                 img = np.flipud(img)
                 if nL:
-                    labels[:, 2] = 1 - labels[:, 2]
+                    labels[:, 3] = 1 - labels[:, 3]  # edit
 
             # flip left-right
             if random.random() < hyp['fliplr']:
                 img = np.fliplr(img)
                 if nL:
-                    labels[:, 1] = 1 - labels[:, 1]
+                    labels[:, 2] = 1 - labels[:, 2]  # edit
 
-        labels_out = torch.zeros((nL, 6))
+        labels_out = torch.zeros((nL, 7))  # edit
+        # print("labels_out", labels_out.shape, labels.shape)  # todo
         if nL:
             labels_out[:, 1:] = torch.from_numpy(labels)
 
@@ -570,6 +571,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
         img = np.ascontiguousarray(img)
 
+        # labels_out: 0, cls1, cls2, xywh  # edit
+        # print("labels_out", labels_out.shape, labels_out)  # todo
         return torch.from_numpy(img), labels_out, self.img_files[index], shapes
 
     @staticmethod
@@ -649,7 +652,7 @@ def hist_equalize(img, clahe=True, bgr=False):
     return cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR if bgr else cv2.COLOR_YUV2RGB)  # convert YUV image to RGB
 
 
-def load_mosaic(self, index):
+def load_mosaic(self, index):  # todo
     # loads images in a 4-mosaic
 
     labels4 = []
@@ -682,13 +685,13 @@ def load_mosaic(self, index):
         # Labels
         labels = self.labels[index].copy()
         if labels.size:
-            labels[:, 1:] = xywhn2xyxy(labels[:, 1:], w, h, padw, padh)  # normalized xywh to pixel xyxy format
+            labels[:, 2:] = xywhn2xyxy(labels[:, 2:], w, h, padw, padh)  # normalized xywh to pixel xyxy format  # edit
         labels4.append(labels)
 
     # Concat/clip labels
     if len(labels4):
         labels4 = np.concatenate(labels4, 0)
-        np.clip(labels4[:, 1:], 0, 2 * s, out=labels4[:, 1:])  # use with random_perspective
+        np.clip(labels4[:, 2:], 0, 2 * s, out=labels4[:, 2:])  # use with random_perspective  # edit
         # img4, labels4 = replicate(img4, labels4)  # replicate
 
     # Augment
@@ -739,9 +742,9 @@ def load_mosaic9(self, index):
         x1, y1, x2, y2 = [max(x, 0) for x in c]  # allocate coords
 
         # Labels
-        labels = self.labels[index].copy()
+        labels = self.labels[index].copy()  # cls1, cls2, xyxy
         if labels.size:
-            labels[:, 1:] = xywhn2xyxy(labels[:, 1:], w, h, padx, pady)  # normalized xywh to pixel xyxy format
+            labels[:, 2:] = xywhn2xyxy(labels[:, 2:], w, h, padx, pady)  # normalized xywh to pixel xyxy format  # edit
         labels9.append(labels)
 
         # Image
@@ -755,10 +758,10 @@ def load_mosaic9(self, index):
     # Concat/clip labels
     if len(labels9):
         labels9 = np.concatenate(labels9, 0)
-        labels9[:, [1, 3]] -= xc
-        labels9[:, [2, 4]] -= yc
+        labels9[:, [2, 4]] -= xc  # edit
+        labels9[:, [3, 5]] -= yc  # edit
 
-        np.clip(labels9[:, 1:], 0, 2 * s, out=labels9[:, 1:])  # use with random_perspective
+        np.clip(labels9[:, 2:], 0, 2 * s, out=labels9[:, 2:])  # use with random_perspective  # edit
         # img9, labels9 = replicate(img9, labels9)  # replicate
 
     # Augment
@@ -776,7 +779,7 @@ def load_mosaic9(self, index):
 def replicate(img, labels):
     # Replicate labels
     h, w = img.shape[:2]
-    boxes = labels[:, 1:].astype(int)
+    boxes = labels[:, 2:].astype(int)  # edit
     x1, y1, x2, y2 = boxes.T
     s = ((x2 - x1) + (y2 - y1)) / 2  # side length (pixels)
     for i in s.argsort()[:round(s.size * 0.5)]:  # smallest indices
@@ -825,7 +828,7 @@ def letterbox(img, new_shape=(640, 640), color=(114, 114, 114), auto=True, scale
 
 def random_perspective(img, targets=(), degrees=10, translate=.1, scale=.1, shear=10, perspective=0.0, border=(0, 0)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
-    # targets = [cls, xyxy]
+    # targets: cls1, cls2, xyxy  # edit
 
     height = img.shape[0] + border[0] * 2  # shape(h,w,c)
     width = img.shape[1] + border[1] * 2
@@ -877,7 +880,7 @@ def random_perspective(img, targets=(), degrees=10, translate=.1, scale=.1, shea
     if n:
         # warp points
         xy = np.ones((n * 4, 3))
-        xy[:, :2] = targets[:, [1, 2, 3, 4, 1, 4, 3, 2]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
+        xy[:, :2] = targets[:, [2, 3, 4, 5, 2, 5, 4, 3]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1  # edit
         xy = xy @ M.T  # transform
         if perspective:
             xy = (xy[:, :2] / xy[:, 2:3]).reshape(n, 8)  # rescale
@@ -903,9 +906,9 @@ def random_perspective(img, targets=(), degrees=10, translate=.1, scale=.1, shea
         xy[:, [1, 3]] = xy[:, [1, 3]].clip(0, height)
 
         # filter candidates
-        i = box_candidates(box1=targets[:, 1:5].T * s, box2=xy.T)
+        i = box_candidates(box1=targets[:, 2:6].T * s, box2=xy.T)  # edit
         targets = targets[i]
-        targets[:, 1:5] = xy[i]
+        targets[:, 2:6] = xy[i]  # edit
 
     return img, targets
 
@@ -958,7 +961,7 @@ def cutout(image, labels):
         # return unobscured labels
         if len(labels) and s > 0.03:
             box = np.array([xmin, ymin, xmax, ymax], dtype=np.float32)
-            ioa = bbox_ioa(box, labels[:, 1:5])  # intersection over area
+            ioa = bbox_ioa(box, labels[:, 2:6])  # intersection over area  # edit
             labels = labels[ioa < 0.60]  # remove >60% obscured labels
 
     return labels
@@ -1004,7 +1007,7 @@ def extract_boxes(path='../coco128/'):  # from utils.datasets import *; extract_
                     if not f.parent.is_dir():
                         f.parent.mkdir(parents=True)
 
-                    b = x[1:] * [w, h, w, h]  # box
+                    b = x[2:] * [w, h, w, h]  # box  # edit
                     # b[2:] = b[2:].max()  # rectangle to square
                     b[2:] = b[2:] * 1.2 + 3  # pad
                     b = xywh2xyxy(b.reshape(-1, 4)).ravel().astype(np.int)

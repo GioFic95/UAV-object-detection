@@ -369,57 +369,61 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
         # Cache labels
         create_datasubset, extract_bounding_boxes, labels_loaded = False, False, False
-        nm, nf, ne, ns, nd = 0, 0, 0, 0, 0  # number missing, found, empty, datasubset, duplicate
+        nm, nf, ne, ns, nd, nc = 0, 0, 0, 0, 0, 0  # number missing, found, empty, datasubset, duplicate
         pbar = tqdm(self.label_files)
         for i, file in enumerate(pbar):
-            l = self.labels[i]  # label
-            if l.shape[0]:
-                assert l.shape[1] == 5, '> 5 label columns: %s' % file
-                assert (l >= 0).all(), 'negative labels: %s' % file
-                assert (l[:, 1:] <= 1).all(), 'non-normalized or out of bounds coordinate labels: %s' % file
-                if np.unique(l, axis=0).shape[0] < l.shape[0]:  # duplicate rows
-                    nd += 1  # print('WARNING: duplicate rows in %s' % self.label_files[i])  # duplicate rows
-                if single_cls:
-                    l[:, 0] = 0  # force dataset into single-class mode
-                self.labels[i] = l
-                nf += 1  # file found
+            try:
+                l = self.labels[i]  # label
+                if l.shape[0]:
+                    assert l.shape[1] == 5, '> 5 label columns: %s' % file
+                    assert (l >= 0).all(), 'negative labels: %s' % file
+                    assert (l[:, 1:] <= 1).all(), 'non-normalized or out of bounds coordinate labels: %s' % file
+                    if np.unique(l, axis=0).shape[0] < l.shape[0]:  # duplicate rows
+                        nd += 1  # print('WARNING: duplicate rows in %s' % self.label_files[i])  # duplicate rows
+                    if single_cls:
+                        l[:, 0] = 0  # force dataset into single-class mode
+                    self.labels[i] = l
+                    nf += 1  # file found
 
-                # Create subdataset (a smaller dataset)
-                if create_datasubset and ns < 1E4:
-                    if ns == 0:
-                        create_folder(path='./datasubset')
-                        os.makedirs('./datasubset/images')
-                    exclude_classes = 43
-                    if exclude_classes not in l[:, 0]:
-                        ns += 1
-                        # shutil.copy(src=self.img_files[i], dst='./datasubset/images/')  # copy image
-                        with open('./datasubset/images.txt', 'a') as f:
-                            f.write(self.img_files[i] + '\n')
+                    # Create subdataset (a smaller dataset)
+                    if create_datasubset and ns < 1E4:
+                        if ns == 0:
+                            create_folder(path='./datasubset')
+                            os.makedirs('./datasubset/images')
+                        exclude_classes = 43
+                        if exclude_classes not in l[:, 0]:
+                            ns += 1
+                            # shutil.copy(src=self.img_files[i], dst='./datasubset/images/')  # copy image
+                            with open('./datasubset/images.txt', 'a') as f:
+                                f.write(self.img_files[i] + '\n')
 
-                # Extract object detection boxes for a second stage classifier
-                if extract_bounding_boxes:
-                    p = Path(self.img_files[i])
-                    img = cv2.imread(str(p))
-                    h, w = img.shape[:2]
-                    for j, x in enumerate(l):
-                        f = '%s%sclassifier%s%g_%g_%s' % (p.parent.parent, os.sep, os.sep, x[0], j, p.name)
-                        if not os.path.exists(Path(f).parent):
-                            os.makedirs(Path(f).parent)  # make new output folder
+                    # Extract object detection boxes for a second stage classifier
+                    if extract_bounding_boxes:
+                        p = Path(self.img_files[i])
+                        img = cv2.imread(str(p))
+                        h, w = img.shape[:2]
+                        for j, x in enumerate(l):
+                            f = '%s%sclassifier%s%g_%g_%s' % (p.parent.parent, os.sep, os.sep, x[0], j, p.name)
+                            if not os.path.exists(Path(f).parent):
+                                os.makedirs(Path(f).parent)  # make new output folder
 
-                        b = x[1:] * [w, h, w, h]  # box
-                        b[2:] = b[2:].max()  # rectangle to square
-                        b[2:] = b[2:] * 1.3 + 30  # pad
-                        b = xywh2xyxy(b.reshape(-1, 4)).ravel().astype(np.int)
+                            b = x[1:] * [w, h, w, h]  # box
+                            b[2:] = b[2:].max()  # rectangle to square
+                            b[2:] = b[2:] * 1.3 + 30  # pad
+                            b = xywh2xyxy(b.reshape(-1, 4)).ravel().astype(np.int)
 
-                        b[[0, 2]] = np.clip(b[[0, 2]], 0, w)  # clip boxes outside of image
-                        b[[1, 3]] = np.clip(b[[1, 3]], 0, h)
-                        assert cv2.imwrite(f, img[b[1]:b[3], b[0]:b[2]]), 'Failure extracting classifier boxes'
-            else:
-                ne += 1  # print('empty labels for image %s' % self.img_files[i])  # file empty
-                # os.system("rm '%s' '%s'" % (self.img_files[i], self.label_files[i]))  # remove
+                            b[[0, 2]] = np.clip(b[[0, 2]], 0, w)  # clip boxes outside of image
+                            b[[1, 3]] = np.clip(b[[1, 3]], 0, h)
+                            assert cv2.imwrite(f, img[b[1]:b[3], b[0]:b[2]]), 'Failure extracting classifier boxes'
+                else:
+                    ne += 1  # print('empty labels for image %s' % self.img_files[i])  # file empty
+                    # os.system("rm '%s' '%s'" % (self.img_files[i], self.label_files[i]))  # remove
+            except Exception as e:
+                nc += 1
+                print(f'WARNING: Ignoring corrupted label {file}: {e}')
 
-            pbar.desc = 'Scanning labels %s (%g found, %g missing, %g empty, %g duplicate, for %g images)' % (
-                cache_path, nf, nm, ne, nd, n)
+            pbar.desc = 'Scanning labels %s (%g found, %g missing, %g empty, %g duplicate, %g corrupted, for %g images)'\
+                        % (cache_path, nf, nm, ne, nd, nc, n)
         if nf == 0:
             s = 'WARNING: No labels found in %s. See %s' % (os.path.dirname(file) + os.sep, help_url)
             print(s)
